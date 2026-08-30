@@ -56,15 +56,20 @@ v1.0 — Release Candidate / Publication Preparation
 - Protocol-level DTN remains out of scope.
 - No public demo URL is claimed; local and deployment-ready execution are the target.
 - Docker runtime verification remains unavailable in this environment.
-- Remote repository, CI, rendering, and deployment verification remain pending.
+- GitHub CLI identifies `yoshitani-dev` as the active account, but its saved token is invalid.
+  Reauthentication is required before the same-name collision check, private repository creation,
+  push, remote CI, or GitHub rendering audit. No remote mutation has occurred.
+- Remote repository, CI, rendering, and deployment verification therefore remain pending.
 
 ## Git
 
 - Pre-RC rewritten HEAD: `a3f59f7`
-- RC audit checkpoint: this commit
+- RC audit checkpoint: `cccd989`
+- authentication-blocker checkpoint: this commit
 - working tree: expected clean after checkpoint
 
 ## Next
 
-- Checkpoint RC audit fixes, create the authorized private GitHub repository, push only
-  `feat/medlink-leo-v1`, and observe remote CI/rendering. Do not merge, publicize, tag, or release.
+- Reauthenticate GitHub CLI for `yoshitani-dev`, then check for a same-name collision. If none
+  exists, create the authorized private repository, push only `feat/medlink-leo-v1`, and observe
+  remote CI/rendering. Do not merge, publicize, tag, or release.
