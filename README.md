@@ -6,6 +6,9 @@ MedLink-LEO simulates deadline-constrained synthetic medical-data delivery over 
 satellite links by combining SGP4 orbit propagation, a documented RF link model, and deterministic
 scheduling algorithms.
 
+It brings orbital mechanics, RF link budgeting, networking and scheduling, deterministic
+simulation, and reproducible experimental evaluation into one testable package.
+
 **Engineering problem:** when short contact windows cannot carry every queued item, how does the
 scheduling rule change delivery deadlines, latency, and completed workload?
 
@@ -162,8 +165,8 @@ python -m ruff check .
 - Unit and integration coverage includes scheduling, validation, RF reference calculations,
   frozen-orbit contacts, pause/resume semantics, timestep sanity, CLI, benchmark determinism, and
   Streamlit's supported AppTest path.
-- Final local verification on Python 3.12.13: 71 tests passed, Ruff passed, and package dependency
-  checks reported no conflicts.
+- Release Candidate verification on Python 3.12.13: 72 tests passed, Ruff passed, and package
+  dependency checks reported no conflicts.
 - `.github/workflows/ci.yml` configures install, lint, and tests on Python 3.11 and 3.12. A remote
   run has not been observed because nothing was pushed.
 - `Dockerfile` launches the offline Web Demo. Docker was unavailable on the verification host, so
@@ -208,7 +211,6 @@ data are intentionally not implemented. See [roadmap.md](docs/roadmap.md).
 > not intended for diagnosis, treatment, clinical decision-making, or real-world medical
 > operations.** Priority labels are illustrative simulation classes, not clinical guidance.
 
-## License status
+## License
 
-No `LICENSE` file is present. License selection remains a manual project-owner decision before
-public distribution; this project does not silently assign one.
+MedLink-LEO is available under the [MIT License](LICENSE). Copyright (c) 2026 yoshitani-dev.

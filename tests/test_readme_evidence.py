@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import tomllib
 from pathlib import Path
 
 
@@ -33,3 +34,16 @@ def test_safety_disclaimer_is_visible_in_readme_and_web_demo() -> None:
     required = "uses synthetic medical data only"
     assert required in (root / "README.md").read_text(encoding="utf-8")
     assert required in (root / "app" / "streamlit_app.py").read_text(encoding="utf-8")
+
+
+def test_publication_license_is_consistent() -> None:
+    root = Path(__file__).resolve().parents[1]
+    readme = (root / "README.md").read_text(encoding="utf-8")
+    license_text = (root / "LICENSE").read_text(encoding="utf-8")
+    project = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))["project"]
+
+    assert "[MIT License](LICENSE)" in readme
+    assert license_text.startswith("MIT License\n")
+    assert "Copyright (c) 2026 yoshitani-dev" in license_text
+    assert project["license"] == "MIT"
+    assert project["license-files"] == ["LICENSE"]
