@@ -28,7 +28,15 @@ Run one strategy:
 python -m medlink simulate --scenario examples/basic_scenario.json --strategy edf
 ```
 
-## Implemented through v0.5
+Launch the offline Web Demo:
+
+```powershell
+streamlit run app/streamlit_app.py
+```
+
+The bundled default needs no API key or live network access.
+
+## Implemented through v0.7
 
 - FIFO, illustrative medical-priority, and earliest-deadline-first scheduling
 - Deterministic release times and tie-breaking
@@ -43,5 +51,6 @@ python -m medlink simulate --scenario examples/basic_scenario.json --strategy ed
 - Non-preemptive transfer pause/resume across intermittent contacts
 - Finite-horizon delivered, undelivered, deferred, deadline, latency, and utilization metrics
 - Reproducible 108-run scheduler benchmark with raw data, summaries, and generated plots
+- Offline Streamlit demo over the same tested simulation core
 
 See [docs/assumptions.md](docs/assumptions.md) for the current model boundary.

@@ -2,20 +2,22 @@
 
 ## Current Milestone
 
-v0.5 — Reproducible Benchmark Experiments
+v0.7 — Interactive Web Demo
 
 ## Completed
 
-- v0.1 through v0.4 checkpointed and verified.
-- Deterministic benchmark matrix, artifacts, summaries, plots, and methodology implemented.
+- v0.1 through v0.5 checkpointed and verified.
+- Offline Streamlit demo implemented as a thin UI over the scenario and simulation APIs.
+- Default workload, frozen TLE, link trace, delivery detail, and three-scheduler comparison exposed.
 
 ## Verification
 
-- `python -m pytest`: 65 passed.
+- `python -m pip install -e ".[dev]"`: editable package installed with Streamlit 1.62.0.
+- `python -m pytest tests/test_streamlit_app.py -q`: 1 passed.
+- `python -m pytest`: 66 passed.
 - `python -m ruff check .`: passed.
-- Canonical benchmark: 108 runs generated from code.
-- Independent second run: raw CSV and all deterministic summaries matched SHA-256 hashes.
-- Benchmark plots: rendered and visually inspected.
+- The AppTest run loaded the default scenario, clicked `Run Simulation`, and verified the
+  deterministic FIFO/Priority/EDF comparison without a live network dependency.
 
 ## Assumptions Added
 
@@ -28,13 +30,15 @@ v0.5 — Reproducible Benchmark Experiments
 
 ## Known Limitations
 
-- Web Demo is a later milestone; protocol-level DTN remains out of scope.
+- Protocol-level DTN remains out of scope.
+- No public demo URL is claimed; local and deployment-ready execution are the target.
 
 ## Git
 
-- HEAD: cf769eb
-- working tree: ready for v0.5 checkpoint
+- HEAD before checkpoint: f988036
+- working tree: ready for v0.7 checkpoint
 
 ## Next
 
-- Verify and generate the canonical benchmark, then implement the Web Demo.
+- Checkpoint v0.7, then add CI, container configuration, deployment notes, and final engineering
+  documentation for v0.9.

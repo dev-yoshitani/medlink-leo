@@ -1,6 +1,6 @@
 """Deterministic SGP4 orbit propagation and ground-station visibility."""
 
-from medlink.orbit.models import ContactWindow, FrozenTLE, GroundStation, OrbitSample
+from medlink.orbit.models import ContactWindow, FrozenTLE, GroundStation, OrbitSample, utc_iso
 from medlink.orbit.propagation import (
     find_contact_windows,
     is_in_contact,
@@ -21,4 +21,5 @@ __all__ = [
     "load_tle_json",
     "propagate_orbit",
     "propagate_orbit_many",
+    "utc_iso",
 ]
