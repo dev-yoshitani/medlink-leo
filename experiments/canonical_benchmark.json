@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0",
+  "config_id": "canonical-v0.5",
+  "base_scenario": "../examples/end_to_end_scenario.json",
+  "seed": 20260830,
+  "workload": {
+    "repetitions": 2,
+    "arrival_spacing_s": 2400.0,
+    "arrival_jitter_s": 30.0
+  },
+  "offered_load_factors": [0.75, 1.0, 1.5],
+  "deadline_factors": [0.5, 1.0, 1.5],
+  "minimum_elevation_degs": [10.0, 20.0],
+  "rf_presets": [
+    {
+      "id": "constrained",
+      "overrides": {
+        "channel_bandwidth_hz": 500000.0,
+        "implementation_efficiency": 0.08
+      }
+    },
+    {
+      "id": "nominal",
+      "overrides": {
+        "channel_bandwidth_hz": 1000000.0,
+        "implementation_efficiency": 0.1
+      }
+    }
+  ]
+}
+

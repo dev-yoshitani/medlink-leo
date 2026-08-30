@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .ruff_cache/
+.cache/
 .coverage
 htmlcov/
 build/
@@ -13,4 +14,3 @@ outputs/
 work/
 .env
 .env.*
-

@@ -8,6 +8,7 @@ import sys
 from collections.abc import Sequence
 from typing import Any
 
+from medlink.experiments import run_benchmark
 from medlink.scenarios import load_scenario
 from medlink.scheduling import Strategy
 from medlink.simulation import ComparisonReport, SimulationReport, compare_strategies, simulate
@@ -51,6 +52,12 @@ def build_parser() -> argparse.ArgumentParser:
     compare_parser = subparsers.add_parser("compare", help="compare all scheduling strategies")
     compare_parser.add_argument("--scenario", required=True)
     compare_parser.add_argument("--json", action="store_true", dest="as_json")
+
+    benchmark_parser = subparsers.add_parser("benchmark", help="run a benchmark matrix")
+    benchmark_parser.add_argument("--config", required=True)
+    benchmark_parser.add_argument("--output-dir", required=True)
+    benchmark_parser.add_argument("--publish-dir")
+    benchmark_parser.add_argument("--json", action="store_true", dest="as_json")
     return parser
 
 
@@ -58,6 +65,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     try:
+        if args.command == "benchmark":
+            benchmark = run_benchmark(args.config, args.output_dir, args.publish_dir)
+            output = (
+                _json(benchmark.to_dict())
+                if args.as_json
+                else f"benchmark={benchmark.config_id} runs={benchmark.run_count} "
+                f"output_dir={benchmark.output_dir}\n"
+            )
+            sys.stdout.write(output)
+            return 0
         scenario = load_scenario(args.scenario)
         if args.command == "simulate":
             report = simulate(scenario, args.strategy)

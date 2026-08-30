@@ -1,0 +1,4 @@
+strategy,scenario_count,mean_deadline_satisfaction_rate,mean_critical_deadline_satisfaction_rate,mean_average_latency_s,mean_maximum_latency_s,mean_link_utilization,total_delivered_count,total_undelivered_count,total_deferred_count
+fifo,36,0.11805555555555555,0.125,1865.3671930039225,2728.0589531731325,1.0,51,237,76
+priority,36,0.2152777777777778,0.5,816.5376215389598,1366.0225091400569,1.0,69,219,82
+edf,36,0.2326388888888889,0.5,993.112131455205,1900.1596547512559,1.0,75,213,81

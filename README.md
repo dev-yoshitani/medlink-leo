@@ -19,6 +19,7 @@ python -m pip install -e ".[dev]"
 python -m medlink compare --scenario examples/basic_scenario.json
 python -m medlink compare --scenario examples/basic_scenario.json --json
 python -m medlink compare --scenario examples/end_to_end_scenario.json
+python -m medlink benchmark --config experiments/canonical_benchmark.json --output-dir artifacts/benchmark
 ```
 
 Run one strategy:
@@ -27,7 +28,7 @@ Run one strategy:
 python -m medlink simulate --scenario examples/basic_scenario.json --strategy edf
 ```
 
-## Implemented through v0.4
+## Implemented through v0.5
 
 - FIFO, illustrative medical-priority, and earliest-deadline-first scheduling
 - Deterministic release times and tie-breaking
@@ -41,5 +42,6 @@ python -m medlink simulate --scenario examples/basic_scenario.json --strategy ed
 - Midpoint-sampled dynamic link rate driven by propagated range
 - Non-preemptive transfer pause/resume across intermittent contacts
 - Finite-horizon delivered, undelivered, deferred, deadline, latency, and utilization metrics
+- Reproducible 108-run scheduler benchmark with raw data, summaries, and generated plots
 
 See [docs/assumptions.md](docs/assumptions.md) for the current model boundary.
