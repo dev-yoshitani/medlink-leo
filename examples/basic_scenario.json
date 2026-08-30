@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.0",
+  "scenario_id": "basic-synthetic-v0.1",
+  "description": "Illustrative synthetic workload for deterministic scheduler comparison.",
+  "link": {
+    "bandwidth_bps": 1000000
+  },
+  "medical_data": [
+    {
+      "id": "telemetry-001",
+      "data_type": "synthetic_vital_sign_summary",
+      "size_bytes": 200000,
+      "priority": "CRITICAL",
+      "created_at_s": 0,
+      "deadline_s": 4
+    },
+    {
+      "id": "waveform-001",
+      "data_type": "synthetic_waveform_segment",
+      "size_bytes": 500000,
+      "priority": "HIGH",
+      "created_at_s": 0,
+      "deadline_s": 12
+    },
+    {
+      "id": "image-001",
+      "data_type": "synthetic_medical_image",
+      "size_bytes": 1500000,
+      "priority": "NORMAL",
+      "created_at_s": 1,
+      "deadline_s": 20
+    },
+    {
+      "id": "batch-001",
+      "data_type": "synthetic_archive_batch",
+      "size_bytes": 1000000,
+      "priority": "LOW",
+      "created_at_s": 0,
+      "deadline_s": 40
+    }
+  ]
+}
+
