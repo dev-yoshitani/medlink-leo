@@ -9,6 +9,8 @@ No scheduler is assumed to win before the experiment is run.
 
 ## Canonical matrix
 
+The committed configuration identifier is `canonical-v1.0`.
+
 The canonical configuration evaluates the full Cartesian product of:
 
 - three offered-load factors: 0.75, 1.0, and 1.5;
@@ -65,4 +67,3 @@ The experiment is a single-satellite, single-ground-station, single-hop abstract
 packet protocols, retransmissions, atmospheric fading, interference, multi-hop routing, and
 clinical validation. Results support comparison inside the documented simulation assumptions;
 they do not predict clinical or operational performance.
-

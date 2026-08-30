@@ -169,6 +169,22 @@ def test_capacity_trace_rate_changes_with_range(monkeypatch) -> None:
     assert trace[0].effective_rate_bps > trace[1].effective_rate_bps
 
 
+def test_explicit_empty_contact_windows_do_not_trigger_a_second_search(
+    monkeypatch,
+) -> None:
+    test_scenario = scenario(item("a"), horizon_s=2)
+
+    def unexpected_search(*args, **kwargs):
+        del args, kwargs
+        raise AssertionError("explicit contact windows must be honored")
+
+    monkeypatch.setattr(
+        "medlink.simulation.intermittent.find_contact_windows", unexpected_search
+    )
+    trace = build_capacity_trace(test_scenario, ())
+    assert len(trace) == 2
+
+
 def test_fixed_trace_is_deterministic_and_step_sane() -> None:
     test_scenario = scenario(item("a", size_bytes=2), horizon_s=2)
     coarse = (interval(0, 2, 8),)

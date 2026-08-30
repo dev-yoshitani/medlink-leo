@@ -11,7 +11,7 @@ from typing import Any
 from medlink.link import RFLinkTemplate
 from medlink.models import LinkConfig, MedicalData, Priority, ensure_finite
 from medlink.orbit import FrozenTLE, GroundStation, load_bundled_tle
-from medlink.orbit.models import parse_utc
+from medlink.orbit.models import parse_utc, require_utc
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,6 +52,8 @@ class IntermittentScenario:
             raise ValueError("schema_version must be '1.0'")
         if not isinstance(self.scenario_id, str) or not self.scenario_id.strip():
             raise ValueError("scenario_id must be a non-empty string")
+        object.__setattr__(self, "start_utc", require_utc(self.start_utc, "start_utc"))
+        object.__setattr__(self, "end_utc", require_utc(self.end_utc, "end_utc"))
         if self.end_utc <= self.start_utc:
             raise ValueError("simulation end_utc must be after start_utc")
         time_step_s = ensure_finite("time_step_s", self.time_step_s)

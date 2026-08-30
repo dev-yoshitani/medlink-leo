@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "config_id": "canonical-v0.5",
+  "config_id": "canonical-v1.0",
   "base_scenario": "../examples/end_to_end_scenario.json",
   "seed": 20260830,
   "workload": {
@@ -28,4 +28,3 @@
     }
   ]
 }
-

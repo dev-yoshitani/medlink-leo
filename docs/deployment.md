@@ -7,7 +7,7 @@ generic container host; publishing remains a manual action.
 
 Requirements:
 
-- Python 3.11 or 3.12;
+- Python 3.11 or newer;
 - no environment variables for the bundled default;
 - no API key and no live TLE download.
 

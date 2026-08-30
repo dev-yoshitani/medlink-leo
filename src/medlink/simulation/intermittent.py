@@ -157,11 +157,15 @@ def build_capacity_trace(
     windows: tuple[ContactWindow, ...] | None = None,
 ) -> tuple[CapacityInterval, ...]:
     """Build deterministic midpoint-sampled physical capacity intervals."""
-    contact_windows = windows or find_contact_windows(
-        scenario.tle,
-        scenario.ground_station,
-        scenario.start_utc,
-        scenario.end_utc,
+    contact_windows = (
+        windows
+        if windows is not None
+        else find_contact_windows(
+            scenario.tle,
+            scenario.ground_station,
+            scenario.start_utc,
+            scenario.end_utc,
+        )
     )
     boundaries = _event_boundaries(scenario, contact_windows)
     pairs = tuple(zip(boundaries[:-1], boundaries[1:], strict=True))

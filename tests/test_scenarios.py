@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
+from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -66,3 +68,27 @@ def test_empty_medical_data_is_rejected(tmp_path: Path) -> None:
     )
     with pytest.raises(ValueError, match="at least one"):
         load_scenario(path)
+
+
+def test_direct_intermittent_scenario_rejects_naive_times() -> None:
+    scenario = load_scenario(Path("examples/end_to_end_scenario.json"))
+    with pytest.raises(ValueError, match="timezone-aware"):
+        replace(
+            scenario,
+            start_utc=datetime(2014, 1, 20, 22, 55),
+            end_utc=datetime(2014, 1, 21, 0, 50),
+        )
+
+
+def test_direct_intermittent_scenario_normalizes_times_to_utc() -> None:
+    scenario = load_scenario(Path("examples/end_to_end_scenario.json"))
+    jst = timezone(timedelta(hours=9))
+    normalized = replace(
+        scenario,
+        start_utc=datetime(2014, 1, 21, 7, 55, tzinfo=jst),
+        end_utc=datetime(2014, 1, 21, 9, 50, tzinfo=jst),
+    )
+    assert normalized.start_utc == datetime(2014, 1, 20, 22, 55, tzinfo=UTC)
+    assert normalized.end_utc == datetime(2014, 1, 21, 0, 50, tzinfo=UTC)
+    assert normalized.start_utc.tzinfo is UTC
+    assert normalized.end_utc.tzinfo is UTC
