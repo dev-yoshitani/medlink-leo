@@ -4,11 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "medlink-leo"
-version = "0.2.0"
+version = "0.3.0"
 description = "Reliable medical-data delivery over constrained LEO satellite links."
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+  "numpy>=1.26,<2.5",
+  "skyfield>=1.49,<2",
+]
 
 [project.optional-dependencies]
 dev = [
@@ -21,6 +24,9 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+"medlink.orbit" = ["data/*.json"]
 
 [tool.pytest.ini_options]
 addopts = "-ra"
