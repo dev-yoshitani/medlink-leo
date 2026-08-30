@@ -14,6 +14,13 @@ def test_load_basic_scenario() -> None:
     assert len(scenario.medical_data) == 4
 
 
+def test_load_end_to_end_scenario() -> None:
+    scenario = load_scenario(Path("examples/end_to_end_scenario.json"))
+    assert scenario.scenario_id == "tokyo-iss-synthetic-v0.4"
+    assert scenario.horizon_s == 6_900
+    assert scenario.tle.satellite_name == "ISS (ZARYA)"
+
+
 def test_duplicate_ids_are_rejected(tmp_path: Path) -> None:
     payload = {
         "schema_version": "1.0",
@@ -59,4 +66,3 @@ def test_empty_medical_data_is_rejected(tmp_path: Path) -> None:
     )
     with pytest.raises(ValueError, match="at least one"):
         load_scenario(path)
-

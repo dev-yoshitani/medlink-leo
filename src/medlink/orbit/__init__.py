@@ -7,6 +7,7 @@ from medlink.orbit.propagation import (
     load_bundled_tle,
     load_tle_json,
     propagate_orbit,
+    propagate_orbit_many,
 )
 
 __all__ = [
@@ -19,5 +20,5 @@ __all__ = [
     "load_bundled_tle",
     "load_tle_json",
     "propagate_orbit",
+    "propagate_orbit_many",
 ]
-

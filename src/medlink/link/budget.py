@@ -72,6 +72,48 @@ class RFLinkConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class RFLinkTemplate:
+    """Range-independent RF inputs for a dynamic link."""
+
+    frequency_hz: float
+    tx_power_dbm: float
+    tx_antenna_gain_dbi: float
+    rx_antenna_gain_dbi: float
+    system_losses_db: float
+    noise_temperature_k: float
+    channel_bandwidth_hz: float
+    implementation_efficiency: float
+    required_snr_db: float | None = None
+
+    def __post_init__(self) -> None:
+        validated = self.at_range(1.0)
+        for field_name in (
+            "frequency_hz",
+            "tx_power_dbm",
+            "tx_antenna_gain_dbi",
+            "rx_antenna_gain_dbi",
+            "system_losses_db",
+            "noise_temperature_k",
+            "channel_bandwidth_hz",
+            "implementation_efficiency",
+            "required_snr_db",
+        ):
+            object.__setattr__(self, field_name, getattr(validated, field_name))
+
+    def at_range(self, range_m: float) -> RFLinkConfig:
+        return RFLinkConfig(
+            frequency_hz=self.frequency_hz,
+            range_m=range_m,
+            tx_power_dbm=self.tx_power_dbm,
+            tx_antenna_gain_dbi=self.tx_antenna_gain_dbi,
+            rx_antenna_gain_dbi=self.rx_antenna_gain_dbi,
+            system_losses_db=self.system_losses_db,
+            noise_temperature_k=self.noise_temperature_k,
+            channel_bandwidth_hz=self.channel_bandwidth_hz,
+            implementation_efficiency=self.implementation_efficiency,
+            required_snr_db=self.required_snr_db,
+        )
+@dataclass(frozen=True, slots=True)
 class LinkBudgetResult:
     free_space_path_loss_db: float
     received_power_dbm: float
@@ -154,4 +196,3 @@ def calculate_link_budget(config: RFLinkConfig) -> LinkBudgetResult:
         effective_rate_bps=effective_rate_bps,
         link_margin_db=margin_db,
     )
-

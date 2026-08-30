@@ -99,6 +99,42 @@ def propagate_orbit(tle: FrozenTLE, station: GroundStation, at_utc: datetime) ->
     )
 
 
+def propagate_orbit_many(
+    tle: FrozenTLE,
+    station: GroundStation,
+    times_utc: tuple[datetime, ...] | list[datetime],
+) -> tuple[OrbitSample, ...]:
+    """Vector-propagate several UTC observations with one Skyfield call."""
+    if not times_utc:
+        return ()
+    normalized = tuple(require_utc(moment, "times_utc item") for moment in times_utc)
+    times = _timescale().from_datetimes(normalized)
+    topocentric = _topocentric_vector(tle, station).at(times)
+    altitude, azimuth, distance = topocentric.altaz()
+    samples: list[OrbitSample] = []
+    for moment, elevation, bearing, range_m in zip(
+        normalized,
+        altitude.degrees,
+        azimuth.degrees,
+        distance.m,
+        strict=True,
+    ):
+        checked_range = float(range_m)
+        if checked_range <= 0:
+            raise ValueError("propagated range must be positive")
+        elevation_deg = float(elevation)
+        samples.append(
+            OrbitSample(
+                time_utc=moment,
+                azimuth_deg=float(bearing) % 360.0,
+                elevation_deg=elevation_deg,
+                range_m=checked_range,
+                in_contact=elevation_deg >= station.minimum_elevation_deg,
+            )
+        )
+    return tuple(samples)
+
+
 def is_in_contact(tle: FrozenTLE, station: GroundStation, at_utc: datetime) -> bool:
     return propagate_orbit(tle, station, at_utc).in_contact
 
@@ -115,7 +151,10 @@ def _minimum_range(
     while current < end:
         sample_times.add(current)
         current += timedelta(seconds=5)
-    return min(propagate_orbit(tle, station, moment).range_m for moment in sample_times)
+    return min(
+        sample.range_m
+        for sample in propagate_orbit_many(tle, station, sorted(sample_times))
+    )
 
 
 def find_contact_windows(

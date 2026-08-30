@@ -4,8 +4,8 @@ Reliable medical-data delivery over constrained LEO satellite links.
 
 MedLink-LEO is an engineering simulation project for comparing deterministic scheduling
 strategies for deadline-constrained synthetic medical-data delivery. The current implementation
-provides a fixed-bandwidth scheduling core, a documented static RF link budget, and offline
-SGP4 orbit/contact modeling from a frozen historical TLE.
+provides a fixed-bandwidth scheduling core, a documented RF link budget, offline SGP4
+orbit/contact modeling, and a resumable intermittent-link simulator.
 
 > **Safety notice:** MedLink-LEO uses synthetic medical data only. It is an engineering
 > simulation project and is not intended for diagnosis, treatment, clinical decision-making,
@@ -18,6 +18,7 @@ SGP4 orbit/contact modeling from a frozen historical TLE.
 python -m pip install -e ".[dev]"
 python -m medlink compare --scenario examples/basic_scenario.json
 python -m medlink compare --scenario examples/basic_scenario.json --json
+python -m medlink compare --scenario examples/end_to_end_scenario.json
 ```
 
 Run one strategy:
@@ -26,7 +27,7 @@ Run one strategy:
 python -m medlink simulate --scenario examples/basic_scenario.json --strategy edf
 ```
 
-## Implemented through v0.3
+## Implemented through v0.4
 
 - FIFO, illustrative medical-priority, and earliest-deadline-first scheduling
 - Deterministic release times and tie-breaking
@@ -37,5 +38,8 @@ python -m medlink simulate --scenario examples/basic_scenario.json --strategy ed
 - Thermal-noise, SNR, Shannon upper-bound, and effective-rate calculations
 - Frozen historical TLE fixture and Skyfield/SGP4 propagation
 - Ground-station azimuth, elevation, range, and contact-window detection
+- Midpoint-sampled dynamic link rate driven by propagated range
+- Non-preemptive transfer pause/resume across intermittent contacts
+- Finite-horizon delivered, undelivered, deferred, deadline, latency, and utilization metrics
 
 See [docs/assumptions.md](docs/assumptions.md) for the current model boundary.

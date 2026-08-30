@@ -39,3 +39,19 @@ def test_cli_json_is_deterministic(capsys) -> None:
     assert first == second
     payload = json.loads(first)
     assert [item["strategy"] for item in payload["strategies"]] == ["fifo", "priority", "edf"]
+
+
+def test_cli_end_to_end_scenario(capsys) -> None:
+    args = [
+        "simulate",
+        "--scenario",
+        "examples/end_to_end_scenario.json",
+        "--strategy",
+        "edf",
+        "--json",
+    ]
+    assert main(args) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["mode"] == "intermittent"
+    assert payload["contact_windows"]
+    assert payload["metrics"]["available_capacity_bits"] > 0

@@ -9,6 +9,7 @@ from medlink.orbit import (
     find_contact_windows,
     load_bundled_tle,
     propagate_orbit,
+    propagate_orbit_many,
 )
 
 
@@ -45,6 +46,14 @@ def test_naive_datetime_is_rejected() -> None:
         propagate_orbit(
             load_bundled_tle(), station(), datetime(2014, 1, 20, 22, 23, 4)
         )
+
+
+def test_vector_propagation_matches_scalar_results() -> None:
+    tle = load_bundled_tle()
+    times = [tle.epoch_utc, tle.epoch_utc + timedelta(minutes=5)]
+    vector = propagate_orbit_many(tle, station(), times)
+    scalar = tuple(propagate_orbit(tle, station(), moment) for moment in times)
+    assert vector == scalar
 
 
 @pytest.mark.parametrize(

@@ -51,7 +51,7 @@ class SimulationReport:
 @dataclass(frozen=True, slots=True)
 class ComparisonReport:
     scenario_id: str
-    reports: tuple[SimulationReport, ...]
+    reports: tuple[Any, ...]
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -111,4 +111,3 @@ def compare_strategies(scenario: FixedScenario) -> ComparisonReport:
         scenario_id=scenario.scenario_id,
         reports=tuple(simulate(scenario, strategy) for strategy in SCHEDULER_ORDER),
     )
-

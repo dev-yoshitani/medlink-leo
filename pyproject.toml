@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "medlink-leo"
-version = "0.3.0"
+version = "0.4.0"
 description = "Reliable medical-data delivery over constrained LEO satellite links."
 readme = "README.md"
 requires-python = ">=3.11"

@@ -12,6 +12,12 @@
   modeled in the fixed-link v0.1 mode.
 - Orbit examples use a frozen 2014 ISS TLE only near its documented epoch.
 - The Tokyo reference ground station is illustrative and is not an operational facility claim.
+- The v0.4 physical simulator uses a single satellite, one ground station, and one active item.
+- Transfer progress is retained across contact loss; this is not a DTN or Bundle Protocol model.
+- A newly created higher-priority item does not preempt an active item.
+- Range and effective rate use deterministic midpoint sampling at the scenario `time_step_s`.
+- `undelivered` means unfinished at the finite horizon; `deferred` is the subset whose deadline
+  lies after that horizon.
 
 MedLink-LEO is an engineering simulation project. It is not intended for diagnosis, treatment,
 clinical decision-making, or real-world medical operations.
