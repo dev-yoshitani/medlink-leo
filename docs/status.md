@@ -2,22 +2,24 @@
 
 ## Current Milestone
 
-v0.7 — Interactive Web Demo
+v0.9 — Production-Quality Engineering
 
 ## Completed
 
-- v0.1 through v0.5 checkpointed and verified.
-- Offline Streamlit demo implemented as a thin UI over the scenario and simulation APIs.
-- Default workload, frozen TLE, link trace, delivery detail, and three-scheduler comparison exposed.
+- v0.1 through v0.7 checkpointed and verified.
+- GitHub Actions, Docker, deployment, architecture, roadmap, and expanded model-boundary
+  documentation added.
 
 ## Verification
 
-- `python -m pip install -e ".[dev]"`: editable package installed with Streamlit 1.62.0.
-- `python -m pytest tests/test_streamlit_app.py -q`: 1 passed.
+- `python -m pip install -e ".[dev]"`: passed; editable 0.9.0 installed.
 - `python -m pytest`: 66 passed.
 - `python -m ruff check .`: passed.
-- The AppTest run loaded the default scenario, clicked `Run Simulation`, and verified the
-  deterministic FIFO/Priority/EDF comparison without a live network dependency.
+- `python -m pip check`: no broken requirements.
+- Bounded headless Streamlit health check: passed; process stopped after verification.
+- Secret-pattern and sensitive-filename scan: no matches; no runtime external HTTP calls found.
+- GitHub Actions workflow: configured for Python 3.11 and 3.12; remote run not observed.
+- Docker: CLI unavailable in this environment; Dockerfile inspected, build not executed.
 
 ## Assumptions Added
 
@@ -32,13 +34,14 @@ v0.7 — Interactive Web Demo
 
 - Protocol-level DTN remains out of scope.
 - No public demo URL is claimed; local and deployment-ready execution are the target.
+- Remote CI has not been observed.
 
 ## Git
 
-- HEAD before checkpoint: f988036
-- working tree: ready for v0.7 checkpoint
+- HEAD before checkpoint: 300e1df
+- working tree: ready for v0.9 checkpoint
 
 ## Next
 
-- Checkpoint v0.7, then add CI, container configuration, deployment notes, and final engineering
-  documentation for v0.9.
+- Checkpoint v0.9, then prepare the recruiter-first README and run the complete v1.0
+  verification matrix.

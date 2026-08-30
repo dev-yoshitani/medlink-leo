@@ -36,7 +36,7 @@ streamlit run app/streamlit_app.py
 
 The bundled default needs no API key or live network access.
 
-## Implemented through v0.7
+## Implemented through v0.9
 
 - FIFO, illustrative medical-priority, and earliest-deadline-first scheduling
 - Deterministic release times and tie-breaking
@@ -52,5 +52,6 @@ The bundled default needs no API key or live network access.
 - Finite-horizon delivered, undelivered, deferred, deadline, latency, and utilization metrics
 - Reproducible 108-run scheduler benchmark with raw data, summaries, and generated plots
 - Offline Streamlit demo over the same tested simulation core
+- Local quality gates plus GitHub Actions and Docker configuration
 
 See [docs/assumptions.md](docs/assumptions.md) for the current model boundary.

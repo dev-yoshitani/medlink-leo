@@ -56,3 +56,12 @@ The efficiency \(\eta\) is an engineering abstraction. `effective_rate_bps` must
 interpreted as verified modem throughput. If a scenario supplies `required_snr_db`, link margin
 is reported as `snr_db - required_snr_db`; otherwise it is `null`.
 
+## References
+
+- [NASA communications handbook, free-space basic transmission loss (Eq. 8.12–8.13)](https://ntrs.nasa.gov/api/citations/19840005329/downloads/19840005329.pdf)
+- [NIST CODATA value: speed of light in vacuum](https://physics.nist.gov/cuu/Constants/Value/c.html)
+- [NIST: exact SI value of the Boltzmann constant](https://www.nist.gov/si-redefinition/kelvin/kelvin-boltzmann-constant)
+- [C. E. Shannon, “A Mathematical Theory of Communication,” 1948](https://doi.org/10.1002/j.1538-7305.1948.tb01338.x)
+
+These references support the idealized equations and constants. They do not turn
+`effective_rate_bps` into a modem-performance prediction.
