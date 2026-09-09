@@ -17,6 +17,12 @@ v1.1 — Contact-Plan-Aware Medical Routing (implementation in progress)
   and four machine-readable failure reasons.
 - Added a three-station synthetic example, `route` / `route-compare` CLI commands, and a separate
   routing benchmark runner.
+- Generated the 216-run canonical routing benchmark twice; deterministic raw and summary files
+  match byte-for-byte and the small evidence set is committed under `docs/assets/`.
+- Added the recruiter-facing routing-first Streamlit mode, Ground Station comparison, and
+  deterministic Why this route? explanations while preserving Existing Simulation mode.
+- Updated package metadata to 1.1.0 and prepared root dependencies, theme configuration,
+  Docker context, and documentation for Streamlit Community Cloud.
 
 ## Verification
 
@@ -25,6 +31,8 @@ v1.1 — Contact-Plan-Aware Medical Routing (implementation in progress)
 - Scenario and routing integration suite: 15 passed.
 - CLI suite including deterministic routing JSON: 7 passed.
 - Benchmark suite including two identical routing smoke runs: 5 passed.
+- Canonical routing raw SHA-256: `E97E43F7C1E28E1A4300A32698B773F134A7C980A19868CFC39E5D1CFBD8AD24`.
+- Streamlit routing and existing-simulation AppTests: 2 passed.
 - Real frozen-TLE example: five contacts generated across Seoul, Sapporo, and Tokyo; strategy
   selection differs when terrestrial backhaul is included.
 
@@ -51,10 +59,11 @@ v1.1 — Contact-Plan-Aware Medical Routing (implementation in progress)
 
 - Base v1.0 RC HEAD: `d754d13`
 - Branch: `feat/medlink-leo-v1.1-routing`
-- v1.1 checkpoint: pending this development checkpoint
+- Routing-core checkpoint: `d18c7e7`
+- UI/evidence checkpoint: pending this development checkpoint
 - Working tree: expected clean after checkpoint commit
 
 ## Next
 
-- Run the 216-case canonical routing benchmark twice, publish the small evidence set, add the
-  recruiter-facing routing UI, update documentation/package version, and run full RC verification.
+- Run full installation, regression, determinism, headless Web, Docker-availability, security,
+  README-link, and recruiter-facing visual verification before the final RC checkpoint.

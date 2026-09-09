@@ -1,67 +1,80 @@
 # Architecture
 
-MedLink-LEO separates physical modeling, scheduling, simulation, analysis, and presentation so
-that the CLI, benchmark, and Web Demo all exercise the same tested package.
+MedLink-LEO keeps orbit and RF physics, item scheduling, route selection, transfer accounting,
+experiments, and presentation in separate modules. The CLI, benchmark runner, and Streamlit app
+call the same package APIs.
 
 ```mermaid
 flowchart LR
     TLE[Frozen TLE] --> SGP4[Skyfield / SGP4]
-    GS[Ground station] --> SGP4
-    SGP4 --> Contact[Contact and range]
-    RF[RF scenario] --> Budget[Link budget]
-    Contact --> Budget
-    Budget --> Capacity[Effective capacity trace]
+    GS[Three ground stations] --> SGP4
+    SGP4 --> Visibility[Visibility / range]
+    RF[RF assumptions] --> Budget[Link budget]
+    Visibility --> Budget
+    Budget --> Plan[Contact Plan capacity + propagation]
 
-    Workload[Synthetic medical workload] --> Scheduler[Scheduler]
-    Scheduler --> Transfer[Intermittent transfer simulator]
-    Capacity --> Transfer
-    Transfer --> Metrics[Delivery metrics]
-    Metrics --> CLI[CLI]
-    Metrics --> Benchmark[Benchmark]
-    Metrics --> Web[Streamlit demo]
+    Clinic[Remote Clinic abstracted uplink] --> Workload[Synthetic workload]
+    Workload --> Scheduler[Existing item scheduler]
+    Scheduler --> Router[Routing engine]
+    Plan --> Router
+    Router --> Transfer[Single-radio transfer]
+    Transfer --> Backhaul[Station backhaul]
+    Backhaul --> Hospital[Hospital Gateway]
+    Transfer --> Metrics[Routing metrics]
+    Metrics --> Outputs[CLI / Benchmark / Streamlit]
 ```
 
 ## Module boundaries
 
 | Module | Responsibility |
 | --- | --- |
-| `models` | Validated medical items, priorities, and fixed-link configuration |
-| `scheduling` | Deterministic FIFO, Priority, and EDF selection functions |
-| `link` | Static RF equations and the range-independent dynamic-link template |
+| `models` | Validated synthetic medical items, priorities, and fixed-link configuration |
+| `scheduling` | Deterministic FIFO, Priority, and EDF item selection |
+| `link` | Static RF equations and a range-independent dynamic-link template |
 | `orbit` | Frozen TLE loading, UTC handling, SGP4 propagation, and contact windows |
-| `scenarios` | JSON loading, validation, and fixed/intermittent scenario types |
-| `simulation` | Fixed-link execution, capacity traces, pause/resume transfers, and public API |
-| `metrics` | Fixed-link delivery metric calculation |
-| `experiments` | Canonical benchmark matrix, artifacts, summaries, and plots |
+| `scenarios` | Fixed, intermittent, and routing JSON schemas and validation |
+| `simulation.capacity` | Shared midpoint integration from range and RF budget to capacity |
+| `simulation` | Fixed-link and pause/resume intermittent-link execution |
+| `routing` | Contact-plan construction, route candidates, policies, decisions, and metrics |
+| `experiments` | Separate v1.0 scheduler and v1.1 routing benchmark pipelines |
 | `cli` | Argument parsing and human/JSON presentation only |
-| `app` | Streamlit presentation over the public scenario and simulation APIs |
+| `app` | Streamlit presentation over tested simulation and routing APIs |
 
-## End-to-end data flow
+## Routing data flow
 
-1. The scenario loader validates units, finite values, identifiers, UTC times, RF inputs, and a
-   finite simulation horizon.
-2. Skyfield propagates the frozen TLE near its epoch. Ground-station geometry produces range,
-   azimuth, elevation, and contact windows.
-3. Each deterministic simulation interval is sampled at its midpoint. Range enters the RF link
-   budget and produces an explicit effective-rate abstraction.
-4. A scheduler selects one ready item. It remains active until complete; contact loss pauses it,
-   and the next contact resumes it with already transferred bits retained.
-5. Delivery outcomes feed common result objects, CLI JSON, benchmark records, and the Web Demo.
+1. The routing scenario validates network-node IDs, station coordinates, RF assumptions,
+   backhaul delays, UTC times, item data, and a finite horizon.
+2. Skyfield propagates the frozen TLE near its epoch. Each station independently produces contact
+   windows, range, elevation, and azimuth.
+3. `simulation.capacity.build_station_capacity_trace()` samples each interval midpoint and calls
+   the existing link-budget implementation. The routing layer does not duplicate FSPL, noise,
+   SNR, or capacity equations.
+4. The contact-plan builder integrates interval capacity and records a capacity-weighted one-way
+   propagation delay for each satellite-to-station opportunity.
+5. An existing scheduler selects the next ready medical item. The routing engine then evaluates
+   candidate contacts under one routing policy.
+6. RF completion advances the single shared satellite-radio clock. Station backhaul contributes
+   to hospital arrival but does not block that radio.
+7. Route results retain every candidate and a deterministic decision reason for JSON, tests, the
+   benchmark, and the Web Demo.
 
-## Interfaces and extension points
+## Routing and scheduling boundary
 
-- A scheduler is a selection callable registered in `scheduling.strategies`; adding one does not
-  require simulator changes.
-- `simulation.simulate()` and `compare_strategies()` dispatch by scenario type and are the public
-  entry points for clients.
-- `RFLinkTemplate.at_range()` isolates the range-dependent calculation from scenario parsing.
-- Benchmark workload generation and physical traces are shared across schedulers to preserve a
-  fair comparison.
-- Future channel or orbit implementations can produce the same capacity/contact information
-  without changing queue semantics.
+Scheduling answers **which item is considered next**. Routing answers **which ground station and
+contact that item should use**. The v1.1 example fixes scheduling to EDF while comparing three
+routing policies. Schedulers remain reusable and are not embedded in the routing implementation.
+
+## Extension points
+
+- `RoutingStrategy` and the rank functions define deterministic routing-policy behavior.
+- `ContactPlan` is a stable boundary between orbit/RF modeling and routing decisions.
+- `CapacityInterval` is shared by intermittent simulation and routing, allowing future validated
+  channel models without rewriting queue logic.
+- Route candidates expose capacity, timing, and feasibility rather than hiding decisions inside a
+  monolithic optimizer.
 
 ## Why the UI is separate
 
-`app/streamlit_app.py` contains no scheduling, orbital, RF, or transfer equations. It loads the
-bundled scenario and formats core results. This prevents the interactive path from becoming a
-second simulator and lets the supported Streamlit test exercise the same behavior as the CLI.
+`app/streamlit_app.py` contains no orbital, RF, scheduling, or routing equations. It formats
+`RoutingComparisonReport` and existing simulation reports, so the Web path cannot silently become
+a second implementation.

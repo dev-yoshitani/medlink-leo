@@ -1,31 +1,39 @@
 # Roadmap
 
-## Implemented in v1.0 scope
+## Implemented in v1.0
 
-- Deterministic fixed-link simulation with FIFO, illustrative Priority, and EDF scheduling.
-- Explicit RF link budget with FSPL, received power, thermal noise, SNR, capacity upper bound,
-  implementation efficiency, and optional margin.
-- Frozen historical TLE propagation through Skyfield/SGP4.
-- Ground-station range, azimuth/elevation, and contact-window detection.
-- Single-hop, non-preemptive, resumable transfer across intermittent contacts.
-- Reproducible scheduler benchmark with raw outputs, summaries, and plots.
-- Offline Streamlit demo over the tested package.
-- Pytest, Ruff, GitHub Actions configuration, packaging, and Docker configuration.
+- Deterministic fixed-link and intermittent-link simulation with FIFO, Priority, and EDF.
+- RF link budget with FSPL, received power, thermal noise, SNR, capacity upper bound, explicit
+  efficiency, and optional margin.
+- Frozen historical TLE propagation, station geometry, and contact windows.
+- Non-preemptive pause/resume transfer across intermittent contacts.
+- Reproducible 108-run scheduler benchmark, offline Streamlit demo, packaging, tests, Ruff, CI
+  configuration, and Docker configuration.
 
-## Deliberately out of scope
+## Implemented in v1.1
 
-- Multi-satellite or multi-ground-station routing.
-- Full Delay/Disruption Tolerant Networking or Bundle Protocol behavior.
-- Packet-level TCP, QUIC, retransmission, congestion-control, or protocol-overhead models.
-- Adaptive coding and modulation, atmospheric/rain fading, interference, or weather models.
-- Scheduler preemption or chunk-based queue selection.
-- Authentication, databases, real patient data, or clinical workflows.
-- Constellation optimization and operational mission planning.
+- One-satellite, three-ground-station Contact Plan with RF-integrated capacity and propagation
+  delay.
+- Strict separation between existing item scheduling and route selection.
+- Next Available Contact, Earliest Arrival, and Deadline-Aware Medical Routing.
+- Configurable station-to-hospital backhaul delay and deterministic candidate explanations.
+- Capacity contention on one satellite-radio timeline and four explicit failure reasons.
+- Route JSON, CLI comparison, 216-run deterministic routing benchmark, and generated evidence.
+- Recruiter-facing Streamlit routing mode with Ground Station comparison and Why this route?
+- Streamlit Community Cloud-ready dependency and entry-point configuration.
+
+## Deliberately out of scope for v1.1
+
+- Full DTN or BPv7 and store-carry-forward contact splitting.
+- Multi-satellite routing and inter-satellite links.
+- Packet-level TCP/QUIC, retransmission, congestion control, or protocol overhead.
+- Adaptive coding/modulation, weather attenuation, interference, and operational link validation.
+- Preemptive scheduling, chunk-based route changes, or a global multi-item optimizer.
+- Authentication, databases, real patient data, diagnosis, or clinical workflows.
 
 ## Promising future engineering work
 
 - Add validated propagation-loss components and modem/coding profiles.
-- Study preemptive or chunked scheduling under the same reproducible workload framework.
-- Generalize capacity providers for controlled multi-contact experiments.
-- Add statistically designed sensitivity analysis without changing the deterministic canonical run.
-- Validate container and CI configuration on an authorized remote service.
+- Compare greedy routing with a clearly bounded global capacity-allocation formulation.
+- Extend the Contact Plan to multiple satellites and explicit store-carry-forward semantics.
+- Add statistically designed sensitivity analysis without changing either canonical benchmark.

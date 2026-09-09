@@ -29,6 +29,36 @@ def test_readme_benchmark_table_matches_committed_summary() -> None:
         assert expected in readme
 
 
+def test_readme_routing_table_matches_committed_summary() -> None:
+    root = Path(__file__).resolve().parents[1]
+    readme = (root / "README.md").read_text(encoding="utf-8")
+    payload = json.loads(
+        (root / "docs" / "assets" / "routing-benchmark" / "summary.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    labels = {
+        "next-contact": "Next Contact",
+        "earliest-arrival": "Earliest Arrival",
+        "deadline-aware": "Deadline-Aware",
+    }
+
+    assert payload["config_id"] == "canonical-contact-plan-routing-v1.1"
+    assert payload["project_version"] == "1.1.0"
+    assert payload["run_count"] == 216
+    for row in payload["summary"]:
+        expected = (
+            f"| {labels[row['strategy']]} | "
+            f"{row['mean_deadline_satisfaction_rate']:.2%} | "
+            f"{row['mean_critical_deadline_satisfaction_rate']:.2%} | "
+            f"{row['mean_delivery_ratio']:.2%} | "
+            f"{row['mean_end_to_end_latency_s']:.2f} s | "
+            f"{row['total_delivered_count']} / "
+            f"{row['total_delivered_count'] + row['total_failed_count']} |"
+        )
+        assert expected in readme
+
+
 def test_safety_disclaimer_is_visible_in_readme_and_web_demo() -> None:
     root = Path(__file__).resolve().parents[1]
     required = "uses synthetic medical data only"

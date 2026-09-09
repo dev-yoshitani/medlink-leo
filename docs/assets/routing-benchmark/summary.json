@@ -1,0 +1,87 @@
+{
+  "schema_version": "1.1",
+  "project_version": "1.1.0",
+  "config_id": "canonical-contact-plan-routing-v1.1",
+  "run_count": 216,
+  "time_step_s": 1.0,
+  "factors": {
+    "offered_load_factors": [
+      0.75,
+      1.0,
+      1.25
+    ],
+    "deadline_factors": [
+      0.75,
+      1.0,
+      1.5
+    ],
+    "backhaul_factors": [
+      0.5,
+      1.5
+    ],
+    "minimum_elevation_degs": [
+      10.0,
+      20.0
+    ],
+    "rf_efficiency_factors": [
+      0.75,
+      1.25
+    ]
+  },
+  "summary": [
+    {
+      "strategy": "next-contact",
+      "scenario_count": 72,
+      "mean_deadline_satisfaction_rate": 0.6805555555555556,
+      "mean_critical_deadline_satisfaction_rate": 1.0,
+      "mean_delivery_ratio": 0.75,
+      "mean_end_to_end_latency_s": 1063.5606747286902,
+      "mean_maximum_end_to_end_latency_s": 2394.9895577866146,
+      "mean_contact_utilization": 0.36800699254437624,
+      "total_delivered_count": 216,
+      "total_failed_count": 72,
+      "selected_gs_sapporo_count": 126,
+      "selected_gs_sapporo_share": 0.5833333333333334,
+      "selected_gs_seoul_count": 30,
+      "selected_gs_seoul_share": 0.1388888888888889,
+      "selected_gs_tokyo_count": 60,
+      "selected_gs_tokyo_share": 0.2777777777777778
+    },
+    {
+      "strategy": "earliest-arrival",
+      "scenario_count": 72,
+      "mean_deadline_satisfaction_rate": 0.6805555555555556,
+      "mean_critical_deadline_satisfaction_rate": 1.0,
+      "mean_delivery_ratio": 0.75,
+      "mean_end_to_end_latency_s": 1048.1988478998817,
+      "mean_maximum_end_to_end_latency_s": 2392.2599672603446,
+      "mean_contact_utilization": 0.36800699254437624,
+      "total_delivered_count": 216,
+      "total_failed_count": 72,
+      "selected_gs_sapporo_count": 72,
+      "selected_gs_sapporo_share": 0.3333333333333333,
+      "selected_gs_seoul_count": 21,
+      "selected_gs_seoul_share": 0.09722222222222222,
+      "selected_gs_tokyo_count": 123,
+      "selected_gs_tokyo_share": 0.5694444444444444
+    },
+    {
+      "strategy": "deadline-aware",
+      "scenario_count": 72,
+      "mean_deadline_satisfaction_rate": 0.6805555555555556,
+      "mean_critical_deadline_satisfaction_rate": 1.0,
+      "mean_delivery_ratio": 0.6805555555555556,
+      "mean_end_to_end_latency_s": 529.1737632151728,
+      "mean_maximum_end_to_end_latency_s": 803.5358846788708,
+      "mean_contact_utilization": 0.320746535426238,
+      "total_delivered_count": 196,
+      "total_failed_count": 92,
+      "selected_gs_sapporo_count": 72,
+      "selected_gs_sapporo_share": 0.3673469387755102,
+      "selected_gs_seoul_count": 4,
+      "selected_gs_seoul_share": 0.02040816326530612,
+      "selected_gs_tokyo_count": 120,
+      "selected_gs_tokyo_share": 0.6122448979591837
+    }
+  ]
+}

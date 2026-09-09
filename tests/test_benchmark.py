@@ -32,6 +32,7 @@ def test_benchmark_generates_expected_artifacts(tmp_path: Path) -> None:
     assert raw["scheduler"].tolist() == ["fifo", "priority", "edf"]
     summary = json.loads((tmp_path / "summary.json").read_text(encoding="utf-8"))
     assert summary["run_count"] == 3
+    assert summary["project_version"] == "1.0.0"
 
 
 def test_benchmark_machine_outputs_are_deterministic(tmp_path: Path) -> None:
@@ -90,6 +91,8 @@ def test_routing_benchmark_generates_deterministic_artifacts(tmp_path: Path) -> 
         "earliest-arrival",
         "deadline-aware",
     ]
+    summary = json.loads((first / "summary.json").read_text(encoding="utf-8"))
+    assert summary["project_version"] == "1.1.0"
 
 
 def test_routing_benchmark_cli(capsys, tmp_path: Path) -> None:

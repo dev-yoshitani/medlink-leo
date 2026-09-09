@@ -22,12 +22,13 @@ import pandas as pd
 matplotlib.use("Agg")
 from matplotlib import pyplot as plt  # noqa: E402
 
-from medlink import __version__
 from medlink.models import MedicalData
 from medlink.orbit import find_contact_windows
 from medlink.scenarios import IntermittentScenario, load_scenario
 from medlink.scheduling import SCHEDULER_ORDER
 from medlink.simulation import build_capacity_trace, simulate_intermittent
+
+LEGACY_BENCHMARK_PROJECT_VERSION = "1.0.0"
 
 
 @dataclass(frozen=True, slots=True)
@@ -40,7 +41,7 @@ class BenchmarkReport:
     def to_dict(self) -> dict[str, Any]:
         return {
             "schema_version": "1.0",
-            "project_version": __version__,
+            "project_version": LEGACY_BENCHMARK_PROJECT_VERSION,
             "config_id": self.config_id,
             "run_count": self.run_count,
             "summary": list(self.summary),
@@ -283,7 +284,7 @@ def run_benchmark(
                         records.append(
                             {
                                 "config_id": config["config_id"],
-                                "project_version": __version__,
+                                "project_version": LEGACY_BENCHMARK_PROJECT_VERSION,
                                 "scheduler": strategy.value,
                                 "seed": seed,
                                 "time_step_s": scenario.time_step_s,
@@ -302,7 +303,7 @@ def run_benchmark(
     summary.to_csv(output / "summary.csv", index=False, lineterminator="\n")
     summary_payload = {
         "schema_version": "1.0",
-        "project_version": __version__,
+        "project_version": LEGACY_BENCHMARK_PROJECT_VERSION,
         "config_id": config["config_id"],
         "run_count": len(records),
         "seed": seed,

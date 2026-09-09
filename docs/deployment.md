@@ -1,45 +1,61 @@
 # Deployment
 
-No public deployment URL is claimed. The application is locally runnable and configured for a
-generic container host; publishing remains a manual action.
+The Streamlit application is prepared for Streamlit Community Cloud and local/container use. No
+public URL is claimed because repository publication and deployment authentication require a
+separate user-authorized action.
+
+## Compatibility summary
+
+- Python: 3.11+; Python 3.12 is the verified release environment.
+- Entry point: `app/streamlit_app.py`.
+- Dependencies: root `requirements.txt` installs the local package with `-e .`; package runtime
+  dependencies remain authoritative in `pyproject.toml`.
+- Environment variables: none for the bundled default.
+- External services: no database, daemon, API key, live TLE, persistent writable disk, or Docker
+  runtime is required.
+- Default data: a bundled synthetic scenario and frozen historical TLE.
 
 ## Local execution
-
-Requirements:
-
-- Python 3.11 or newer;
-- no environment variables for the bundled default;
-- no API key and no live TLE download.
 
 ```powershell
 python -m pip install -e ".[dev]"
 streamlit run app/streamlit_app.py
 ```
 
-The entry point is `app/streamlit_app.py`. Streamlit normally serves it at
-`http://localhost:8501`.
+Streamlit normally serves the app at `http://localhost:8501`. Contact-Plan Routing is the default
+mode; Existing Simulation preserves the v1.0 demo.
+
+## Streamlit Community Cloud
+
+After the repository is intentionally made public or otherwise accessible to the authorized
+Streamlit account:
+
+1. In Streamlit Community Cloud, create an app from this repository and the intended release
+   branch.
+2. Set the main file path to `app/streamlit_app.py`.
+3. In Advanced settings, select Python 3.12.
+4. Leave Secrets empty; the default demo needs no environment variables.
+5. Deploy, then verify the safety notice, Contact-Plan Routing comparison, Ground Station table,
+   Why this route? explanation, and Existing Simulation mode.
+
+Do not add a Live Demo link until the deployed URL has been opened and those checks pass.
 
 ## Container execution
 
 When a Docker daemon is available:
 
 ```powershell
-docker build -t medlink-leo:local .
-docker run --rm -p 8501:8501 medlink-leo:local
+docker build -t medlink-leo:1.1.0 .
+docker run --rm -p 8501:8501 medlink-leo:1.1.0
 ```
 
-The image launches Streamlit on `0.0.0.0:8501` and exposes a health check at
-`/_stcore/health`.
+The image launches Streamlit on `0.0.0.0:8501` and exposes `/_stcore/health`. Docker is optional
+for Community Cloud and is not a default-demo dependency.
 
-## Generic hosted deployment
+## Known host constraints
 
-1. Select a Python or container host that supports Python 3.11+.
-2. Build from the repository root with `Dockerfile`, or install the package from
-   `pyproject.toml`.
-3. Run `streamlit run app/streamlit_app.py --server.address=0.0.0.0`.
-4. Expose the host-assigned port or set the Streamlit port to the platform-provided value.
-5. Verify the safety notice, default run, contact plots, and all three scheduler rows.
-
-The frozen fixture and default scenario are part of the installed repository, so default runtime
-operation does not require outbound network access. Host-specific account setup, billing,
-authentication, and publication are intentionally outside the local implementation.
+Community Cloud executes from the repository root, so all runtime paths are derived from the app
+file rather than the current working directory. Ephemeral storage is sufficient because the app
+reads bundled fixtures and writes no required persistent state. A public deployment still depends
+on repository visibility and interactive service authentication; neither is performed by local
+release preparation.

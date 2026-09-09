@@ -12,6 +12,7 @@ COPY pyproject.toml README.md LICENSE ./
 COPY src ./src
 COPY app ./app
 COPY examples ./examples
+COPY .streamlit ./.streamlit
 
 RUN python -m pip install .
 

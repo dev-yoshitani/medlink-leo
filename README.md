@@ -2,34 +2,144 @@
 
 Reliable medical-data delivery over constrained LEO satellite links.
 
-MedLink-LEO simulates deadline-constrained synthetic medical-data delivery over intermittent LEO
-satellite links by combining SGP4 orbit propagation, a documented RF link model, and deterministic
-scheduling algorithms.
+MedLink-LEO is a deterministic engineering simulator for routing deadline-constrained synthetic
+medical data through intermittent LEO contacts. It combines frozen-TLE SGP4 propagation,
+ground-station visibility, an RF link budget, contact-capacity integration, medical-item
+scheduling, and transparent route selection in one tested Python package.
 
-It brings orbital mechanics, RF link budgeting, networking and scheduling, deterministic
-simulation, and reproducible experimental evaluation into one testable package.
+**Engineering problem:** the first satellite contact is not always the fastest path to a hospital.
+Different contacts offer different RF capacity, timing, propagation delay, and terrestrial
+backhaul, while multiple queued items contend for one satellite radio.
 
-**Engineering problem:** when short contact windows cannot carry every queued item, how does the
-scheduling rule change delivery deadlines, latency, and completed workload?
+## Contact-Plan-Aware Medical Routing — new in v1.1
 
-## What is actually implemented
+```text
+Remote Clinic (uplink abstracted)
+              ↓
+        LEO Satellite
+         ↙    ↓    ↘
+     Seoul  Sapporo  Tokyo
+         ↘    ↓    ↙
+        Hospital Gateway
+```
 
-- FIFO, illustrative medical-priority, and earliest-deadline-first (EDF) schedulers with explicit
-  deterministic tie-breaking.
-- Fixed-bandwidth and orbit-driven intermittent-link simulators.
-- Frozen historical TLE propagation through Skyfield/SGP4; range, azimuth/elevation, and contact
-  windows for a validated ground-station model.
-- Free-space path loss, received power, thermal noise, SNR, Shannon capacity upper bound, explicit
-  implementation efficiency, and optional link margin.
-- Single-hop resumable transfers: contact loss pauses the active item without discarding bits.
-- Deadline, latency, delivered/undelivered/deferred, capacity, and utilization metrics.
-- A seeded 108-run benchmark, machine-readable outputs, generated plots, CLI, and offline Web Demo.
-- Installable packaging, tests, Ruff, GitHub Actions configuration, and a Streamlit Dockerfile.
+- A deterministic **Contact Plan** states who can downlink to whom, when, and with how many
+  RF-derived bits.
+- Existing FIFO, illustrative Medical Priority, and EDF decide **which item is next**.
+- Next Available Contact, Earliest Arrival, and Deadline-Aware routing decide **which contact and
+  ground station that item should use**.
+- Every result exposes candidates, capacity, estimated hospital arrival, deadline feasibility,
+  failure reason, and a deterministic **Why this route?** explanation.
+- The default offline Streamlit mode compares all routes with no login, API key, or live TLE.
 
-## Real canonical result
+## Real v1.1 routing benchmark
 
-The committed canonical benchmark covers 36 physical/workload conditions per scheduler. Each
-scheduler sees the same workload and precomputed orbit/link trace in every matched condition.
+The committed canonical routing matrix contains 216 runs: 72 matched workload, deadline,
+backhaul, contact-availability, and RF-capacity conditions per route policy. EDF scheduling and the
+frozen historical orbit are held constant.
+
+| Routing strategy | Mean deadline satisfaction | Critical-class satisfaction | Delivery ratio | Mean end-to-end latency | Delivered |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Next Contact | 68.06% | 100.00% | 75.00% | 1063.56 s | 216 / 288 |
+| Earliest Arrival | 68.06% | 100.00% | 75.00% | 1048.20 s | 216 / 288 |
+| Deadline-Aware | 68.06% | 100.00% | 68.06% | 529.17 s | 196 / 288 |
+
+In this documented matrix, Earliest Arrival slightly reduces latency while preserving the Next
+Contact delivery count. Deadline-Aware refuses routes estimated to arrive late, so it preserves
+the same deadline-satisfaction rate but delivers fewer items. Its lower mean latency is conditional
+on that smaller delivered set. These are scenario-specific tradeoffs, not a universal ranking.
+
+[Routing benchmark config](experiments/canonical_routing_benchmark.json) ·
+[JSON result](docs/assets/routing-benchmark/summary.json) ·
+[table result](docs/assets/routing-benchmark/summary.md) ·
+[methodology](docs/methodology.md)
+
+![Generated routing deadline result](docs/assets/routing-benchmark/deadline_satisfaction_by_routing_strategy.png)
+
+## Architecture
+
+```mermaid
+flowchart LR
+    TLE[Frozen TLE] --> SGP4[Skyfield / SGP4]
+    GS[Ground stations] --> SGP4
+    SGP4 --> Contact[Visibility / range]
+    RF[RF assumptions] --> Link[Link budget]
+    Contact --> Link
+    Link --> Plan[Contact Plan / capacity]
+
+    Data[Synthetic workload] --> Scheduler[Item scheduler]
+    Scheduler --> Router[Routing engine]
+    Plan --> Router
+    Router --> Radio[Single-radio transfer]
+    Radio --> Backhaul[Ground backhaul]
+    Backhaul --> Metrics[Hospital delivery metrics]
+    Metrics --> Outputs[CLI / Benchmark / Web Demo]
+```
+
+The routing layer reuses the same range-to-capacity integration as the v1.0 intermittent
+simulator; it does not duplicate orbital or RF equations. See
+[architecture.md](docs/architecture.md) and [routing.md](docs/routing.md).
+
+## Interactive demo
+
+```powershell
+python -m pip install -e ".[dev]"
+streamlit run app/streamlit_app.py
+```
+
+The first screen opens **Contact-Plan Routing** with the bundled three-station scenario and frozen
+TLE. One **Compare Routing Strategies** action shows route metrics, contact capacity, station
+backhaul, estimated arrivals, deadline margins, explicit outcomes, and Why this route? evidence.
+The **Existing Simulation** mode preserves the v1.0 scheduler and pause/resume demonstration.
+
+The app is prepared for Streamlit Community Cloud through root `requirements.txt` and
+`app/streamlit_app.py`; no environment variables are required. No public demo URL is claimed.
+See [deployment.md](docs/deployment.md).
+
+## What is implemented
+
+- Frozen historical TLE propagation through Skyfield/SGP4; range, azimuth/elevation, and
+  minimum-elevation contact windows.
+- Free-space path loss, received power, ideal `kTB` thermal noise, SNR, Shannon capacity upper
+  bound, explicit implementation efficiency, and optional link margin.
+- Fixed-bandwidth and orbit-driven intermittent simulators, including non-preemptive transfer
+  pause/resume with retained bits.
+- Multi-ground-station Contact Plan with integrated capacity and one-way propagation delay.
+- Separate deterministic scheduling and routing modules with capacity contention.
+- `NO_CONTACT`, `INSUFFICIENT_CAPACITY`, `DEADLINE_INFEASIBLE`, and
+  `OUTSIDE_SIMULATION_HORIZON` results.
+- Two independent canonical benchmarks, stable JSON/CSV, plots, CLI, and offline Streamlit UI.
+- Installable Python 3.11+ packaging, pytest, Ruff, read-only GitHub Actions, Dockerfile, and
+  Streamlit Community Cloud configuration.
+
+## Route strategies
+
+| Strategy | Deterministic decision rule |
+| --- | --- |
+| Next Available Contact | Earliest feasible RF departure; capacity and stable IDs break ties |
+| Earliest Arrival | Earliest hospital arrival after waiting, RF transfer, propagation, and backhaul |
+| Deadline-Aware | Deadline-feasible candidates first, then earliest arrival and remaining capacity |
+
+An item must fit within one unelapsed contact; v1.1 does not split an item across contacts. The
+satellite radio is single-channel and successful RF completion advances its shared clock.
+Backhaul affects hospital arrival but does not occupy the satellite radio.
+
+## Why was this station selected?
+
+For each item, the engine evaluates every remaining contact and records:
+
+- contact start/end and unelapsed capacity;
+- required bits and dynamic-rate transfer time;
+- RF departure/completion and propagation delay;
+- station backhaul and estimated hospital arrival;
+- deadline/horizon feasibility and deterministic tie-breaks.
+
+The selected candidate and all rejected candidates appear in CLI JSON and the Streamlit Ground
+Station comparison table. No LLM generates the explanation.
+
+## Preserved v1.0 scheduling benchmark
+
+The original `canonical-v1.0` 108-run result remains unchanged and reproducible.
 
 | Scheduler | Mean deadline satisfaction | Critical-class satisfaction | Mean latency | Delivered |
 | --- | ---: | ---: | ---: | ---: |
@@ -37,173 +147,98 @@ scheduler sees the same workload and precomputed orbit/link trace in every match
 | Priority | 21.53% | 50.00% | 816.54 s | 69 / 288 |
 | EDF | 23.26% | 50.00% | 993.11 s | 75 / 288 |
 
-In this deliberately constrained matrix, EDF has the highest mean deadline satisfaction and
-delivered count, while Priority has the lowest mean delivered-item latency. This is an observed
-result inside the documented assumptions, not a claim that one scheduler is universally best.
-Mean link utilization is 100% for all three strategies, so the experiment represents saturated
-contact capacity.
+Inside that saturated single-link matrix, EDF has the highest mean deadline satisfaction and
+delivered count, while Priority has the lowest mean delivered-item latency. This is not a claim
+that either scheduler is universally best.
 
-[Benchmark config](experiments/canonical_benchmark.json) ·
-[JSON result](docs/assets/benchmark/summary.json) ·
-[table result](docs/assets/benchmark/summary.md) ·
-[methodology](docs/methodology.md)
+[v1.0 config](experiments/canonical_benchmark.json) ·
+[v1.0 JSON result](docs/assets/benchmark/summary.json) ·
+[v1.0 table](docs/assets/benchmark/summary.md)
 
-![Generated deadline-satisfaction result](docs/assets/benchmark/deadline_satisfaction_by_scheduler.png)
+## Orbit, link, and numerical model
 
-## Architecture
+- **Orbit:** the bundled ISS (ZARYA) TLE epoch is `2014-01-20T22:23:04Z`; examples run near it and
+  never claim current tracking.
+- **Visibility:** station-relative geometry and contact extrema use timezone-aware UTC inputs.
+- **Capacity:** `B log2(1 + SNR)` is only a channel-capacity upper bound. Effective rate is an
+  explicit `implementation_efficiency` fraction, not verified modem throughput.
+- **Numerics:** the canonical 1 s timestep uses deterministic midpoint sampling. Existing tests
+  include a 0.5 s sanity comparison.
 
-```mermaid
-flowchart LR
-    TLE[Frozen TLE] --> SGP4[Skyfield / SGP4]
-    GS[Ground station] --> SGP4
-    SGP4 --> Contact[Contact / range]
-    RF[RF assumptions] --> Link[Link budget]
-    Contact --> Link
-    Link --> Capacity[Effective capacity]
+Detailed units and sources are in [equations.md](docs/equations.md); fixture provenance is in
+[orbit-fixture.md](docs/orbit-fixture.md).
 
-    Workload[Synthetic workload] --> Scheduler[Scheduler]
-    Scheduler --> Transfer[Intermittent transfer]
-    Capacity --> Transfer
-    Transfer --> Metrics[Delivery metrics]
-    Metrics --> Outputs[CLI / Benchmark / Web Demo]
-```
+## Quick start and CLI
 
-The CLI, experiment runner, and Streamlit app call the same package APIs. See
-[architecture.md](docs/architecture.md) for boundaries and extension points.
-
-## Demo
-
-The bundled Streamlit demo starts with a synthetic scenario and the frozen TLE already selected.
-It requires no API key or live network fetch. One **Run Simulation** action produces contact/link
-plots, delivery detail, pause counts, and an equal-input three-scheduler comparison.
-
-```powershell
-streamlit run app/streamlit_app.py
-```
-
-No public demo URL is claimed. The repository is locally runnable and deployment-ready; see
-[deployment.md](docs/deployment.md).
-
-## Scheduling comparison
-
-| Strategy | Selection order among ready items |
-| --- | --- |
-| FIFO | `created_at_s`, then `id` |
-| Priority | `priority`, `created_at_s`, then `id` |
-| EDF | absolute due time, `priority`, `created_at_s`, then `id` |
-
-All strategies are non-preemptive with respect to other items. During an active transfer,
-connectivity may pause and later resume that same item. A new high-priority arrival waits until the
-active item completes.
-
-## Satellite, orbit, and link model
-
-- **Orbit:** Skyfield uses SGP4 with a bundled ISS (ZARYA) TLE whose epoch is
-  `2014-01-20T22:23:04Z`. Examples run near that epoch and never describe it as current tracking.
-- **Visibility:** station-relative azimuth, elevation, range, an elevation mask, and contact-window
-  extrema are derived with timezone-aware UTC inputs.
-- **RF:** range drives free-space path loss and received power; ideal `kTB` noise produces SNR.
-- **Capacity:** `B log2(1 + SNR)` is named only as a channel-capacity upper bound. The transferred
-  rate is an explicit `implementation_efficiency` fraction, not verified modem throughput.
-- **Numerics:** the default 1 s step uses deterministic midpoint sampling. A 0.5 s convergence
-  sanity check is in the test suite.
-
-Detailed units and authoritative references are in [equations.md](docs/equations.md). The frozen
-fixture and source are documented in [orbit-fixture.md](docs/orbit-fixture.md).
-
-## Benchmark methodology and reproduction
-
-The canonical matrix sweeps three offered loads, three deadline factors, two elevation masks, two
-RF capacity presets, and three schedulers. It uses seed `20260830`, two workload repetitions, the
-same historical orbit interval, and a 1 s timestep. Workload values are illustrative, not
-clinically validated.
-
-```powershell
-python -m medlink benchmark `
-  --config experiments/canonical_benchmark.json `
-  --output-dir artifacts/benchmark `
-  --publish-dir docs/assets/benchmark
-```
-
-The command writes raw CSV, deterministic CSV/JSON/Markdown summaries, plots, and separately
-identified variable run metadata. The committed evidence can be regenerated from code, and a
-regression test checks this README table against the committed JSON summary.
-
-## Quick start
-
-Python 3.11 or newer is required. The CI matrix targets Python 3.11 and 3.12.
+Python 3.11 or newer is required; Python 3.12 is the verified RC environment.
 
 ```powershell
 python -m pip install -e ".[dev]"
+
+# v1.1 routing
+python -m medlink route --scenario examples/contact_plan_medical_routing.json --strategy next-contact
+python -m medlink route --scenario examples/contact_plan_medical_routing.json --strategy earliest-arrival --json
+python -m medlink route --scenario examples/contact_plan_medical_routing.json --strategy deadline-aware
+python -m medlink route-compare --scenario examples/contact_plan_medical_routing.json --json
+
+# Preserved v1.0 simulation
 python -m medlink compare --scenario examples/basic_scenario.json
-python -m medlink compare --scenario examples/end_to_end_scenario.json
-```
-
-## CLI
-
-```powershell
-# One scheduler, human-readable
-python -m medlink simulate --scenario examples/basic_scenario.json --strategy edf
-
-# All schedulers, deterministic machine-readable output
-python -m medlink compare --scenario examples/basic_scenario.json --json
-
-# Orbit-driven comparison
 python -m medlink compare --scenario examples/end_to_end_scenario.json --json
 ```
 
-Supported strategies are `fifo`, `priority`, and `edf`. CLI code is a thin adapter over reusable
-scenario and simulation functions.
+Canonical routing evidence is regenerated with:
+
+```powershell
+python -m medlink routing-benchmark `
+  --config experiments/canonical_routing_benchmark.json `
+  --output-dir artifacts/routing-benchmark `
+  --publish-dir docs/assets/routing-benchmark
+```
+
+Exact factors, held constants, metrics, and interpretation limits are in
+[methodology.md](docs/methodology.md).
 
 ## Testing and engineering quality
 
 ```powershell
+python -m pip check
 python -m pytest
 python -m ruff check .
 ```
 
-- Unit and integration coverage includes scheduling, validation, RF reference calculations,
-  frozen-orbit contacts, pause/resume semantics, timestep sanity, CLI, benchmark determinism, and
-  Streamlit's supported AppTest path.
-- Release Candidate verification on Python 3.12.13: 72 tests passed, Ruff passed, and package
-  dependency checks reported no conflicts.
-- `.github/workflows/ci.yml` configures install, lint, and tests on Python 3.11 and 3.12. A remote
-  run has not been observed because nothing was pushed.
-- `Dockerfile` launches the offline Web Demo. Docker was unavailable on the verification host, so
-  the configuration was inspected but a local image build is not claimed.
-- No credentials, private keys, `.env` file, real patient data, or required runtime network call is
-  present in the repository scan.
-
-Observed commands and environment limitations are recorded in [status.md](docs/status.md).
+Coverage includes validation, RF reference calculations, frozen-orbit contacts, pause/resume,
+contact-plan construction, three routing policies, backhaul-sensitive selection, capacity
+contention, deterministic tie-breaking, failure reasons, CLI JSON, both benchmarks, and Streamlit
+AppTest. `.github/workflows/ci.yml` runs install, Ruff, and pytest on Python 3.11 and 3.12 with
+`contents: read`. Remote CI is not claimed because this branch has not been pushed.
 
 ## Repository structure
 
 ```text
-src/medlink/       tested models, scheduling, RF, orbit, simulation, metrics, CLI, experiments
-app/               Streamlit presentation layer
-examples/          synthetic fixed and intermittent scenarios
-experiments/       canonical benchmark configuration
-tests/             unit, integration, determinism, CLI, and Web Demo tests
-docs/              architecture, equations, assumptions, methodology, status, deployment
-docs/assets/       small generated benchmark evidence committed for review
-.github/workflows/ local CI configuration
+src/medlink/routing/       contact plan, route policies, results, metrics
+src/medlink/simulation/    fixed/intermittent transfer and shared capacity integration
+src/medlink/orbit/         frozen TLE, SGP4, station visibility
+src/medlink/link/          RF equations and effective-rate abstraction
+app/                       Streamlit presentation layer
+examples/                  synthetic v1.0 and v1.1 scenarios
+experiments/               independent scheduler and routing benchmark configs
+docs/assets/               small generated evidence committed for review
+tests/                     unit, integration, determinism, CLI, and Web tests
 ```
 
 ## Assumptions and limitations
 
-The implemented model is single-satellite, single-ground-station, single-hop, and non-preemptive.
-It omits protocol headers, retransmissions, congestion control, atmospheric/rain fading,
-interference, pointing loss, adaptive coding/modulation, and multi-hop routing. `undelivered`
-means incomplete at the finite horizon; `deferred` is the subset whose deadline lies beyond it.
-
-See [assumptions.md](docs/assumptions.md) for the complete boundary.
+The clinic uplink is abstracted: data is available on the satellite at creation time. Routing is
+greedy, one-satellite, one-radio, and one-contact-per-item. It is not full DTN/BPv7 and omits
+contact splitting, multi-satellite routing, packet protocols, retransmissions, fading,
+interference, adaptive RF/MCS, and operational/clinical validation. See
+[assumptions.md](docs/assumptions.md).
 
 ## Future work
 
-Promising extensions include validated propagation losses, modem/coding profiles, preemptive or
-chunked scheduling, multi-contact abstractions, and sensitivity analysis. Multi-satellite routing,
-full DTN/Bundle Protocol, packet-level transport, authentication, databases, and real clinical
-data are intentionally not implemented. See [roadmap.md](docs/roadmap.md).
+Promising next steps are validated propagation losses, modem/coding profiles, bounded global
+capacity allocation, explicit store-carry-forward semantics, and multi-satellite Contact Plans.
+They are intentionally not implemented in v1.1. See [roadmap.md](docs/roadmap.md).
 
 ## Safety disclaimer
 
