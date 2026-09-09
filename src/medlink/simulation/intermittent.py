@@ -7,16 +7,16 @@ from dataclasses import asdict, dataclass
 from datetime import timedelta
 from typing import Any
 
-from medlink.link import LinkBudgetResult, calculate_link_budget
+from medlink.link import calculate_link_budget
 from medlink.models import MedicalData, Priority
 from medlink.orbit import (
     ContactWindow,
-    OrbitSample,
     find_contact_windows,
     propagate_orbit_many,
 )
 from medlink.scenarios import IntermittentScenario
 from medlink.scheduling import Strategy, get_scheduler
+from medlink.simulation.capacity import CapacityInterval, build_station_capacity_trace
 
 
 @dataclass(slots=True)
@@ -121,37 +121,6 @@ class IntermittentSimulationReport:
         }
 
 
-@dataclass(frozen=True, slots=True)
-class CapacityInterval:
-    start_s: float
-    end_s: float
-    sample: OrbitSample
-    link_budget: LinkBudgetResult | None
-
-    @property
-    def duration_s(self) -> float:
-        return self.end_s - self.start_s
-
-    @property
-    def effective_rate_bps(self) -> float:
-        return self.link_budget.effective_rate_bps if self.link_budget is not None else 0.0
-
-
-def _event_boundaries(
-    scenario: IntermittentScenario, windows: tuple[ContactWindow, ...]
-) -> tuple[float, ...]:
-    horizon = scenario.horizon_s
-    boundaries = {0.0, horizon}
-    step = scenario.time_step_s
-    count = int(math.ceil(horizon / step))
-    boundaries.update(min(index * step, horizon) for index in range(1, count + 1))
-    boundaries.update(item.created_at_s for item in scenario.medical_data)
-    for window in windows:
-        boundaries.add(max(0.0, (window.start_utc - scenario.start_utc).total_seconds()))
-        boundaries.add(min(horizon, (window.end_utc - scenario.start_utc).total_seconds()))
-    return tuple(sorted(value for value in boundaries if 0 <= value <= horizon))
-
-
 def build_capacity_trace(
     scenario: IntermittentScenario,
     windows: tuple[ContactWindow, ...] | None = None,
@@ -167,25 +136,17 @@ def build_capacity_trace(
             scenario.end_utc,
         )
     )
-    boundaries = _event_boundaries(scenario, contact_windows)
-    pairs = tuple(zip(boundaries[:-1], boundaries[1:], strict=True))
-    midpoints = [
-        scenario.start_utc + timedelta(seconds=(start + end) / 2.0) for start, end in pairs
-    ]
-    samples = propagate_orbit_many(
-        scenario.tle,
-        scenario.ground_station,
-        midpoints,
+    return build_station_capacity_trace(
+        tle=scenario.tle,
+        ground_station=scenario.ground_station,
+        rf_link=scenario.rf_link,
+        start_utc=scenario.start_utc,
+        end_utc=scenario.end_utc,
+        time_step_s=scenario.time_step_s,
+        contact_windows=contact_windows,
+        extra_boundaries_s=(item.created_at_s for item in scenario.medical_data),
+        propagate_many=propagate_orbit_many,
     )
-    intervals: list[CapacityInterval] = []
-    for (start, end), sample in zip(pairs, samples, strict=True):
-        budget = (
-            calculate_link_budget(scenario.rf_link.at_range(sample.range_m))
-            if sample.in_contact
-            else None
-        )
-        intervals.append(CapacityInterval(start, end, sample, budget))
-    return tuple(intervals)
 
 
 def _select_next(

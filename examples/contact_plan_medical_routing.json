@@ -1,0 +1,103 @@
+{
+  "schema_version": "1.1",
+  "mode": "routing",
+  "scenario_id": "east-asia-contact-plan-synthetic-v1.1",
+  "description": "Illustrative synthetic medical-data routing through three historical ISS contact opportunities.",
+  "simulation": {
+    "start_utc": "2014-01-20T22:55:00Z",
+    "end_utc": "2014-01-21T00:50:00Z",
+    "time_step_s": 1.0
+  },
+  "orbit": {
+    "tle": "bundled_iss_zarya_2014"
+  },
+  "network": {
+    "remote_clinic_id": "remote-clinic",
+    "satellite_id": "leo-satellite",
+    "hospital_gateway_id": "hospital-gateway",
+    "scheduling_strategy": "edf",
+    "ground_stations": [
+      {
+        "id": "gs-seoul",
+        "name": "Seoul Reference Ground Station",
+        "latitude_deg": 37.5665,
+        "longitude_deg": 126.978,
+        "altitude_m": 25.0,
+        "minimum_elevation_deg": 10.0,
+        "backhaul_delay_s": 180.0,
+        "link_overrides": {
+          "implementation_efficiency": 0.07
+        }
+      },
+      {
+        "id": "gs-sapporo",
+        "name": "Sapporo Reference Ground Station",
+        "latitude_deg": 43.0618,
+        "longitude_deg": 141.3545,
+        "altitude_m": 25.0,
+        "minimum_elevation_deg": 10.0,
+        "backhaul_delay_s": 45.0,
+        "link_overrides": {
+          "implementation_efficiency": 0.1
+        }
+      },
+      {
+        "id": "gs-tokyo",
+        "name": "Tokyo Reference Ground Station",
+        "latitude_deg": 35.6895,
+        "longitude_deg": 139.6917,
+        "altitude_m": 25.0,
+        "minimum_elevation_deg": 10.0,
+        "backhaul_delay_s": 5.0,
+        "link_overrides": {
+          "implementation_efficiency": 0.12
+        }
+      }
+    ]
+  },
+  "link": {
+    "frequency_hz": 2200000000.0,
+    "tx_power_dbm": 30.0,
+    "tx_antenna_gain_dbi": 2.0,
+    "rx_antenna_gain_dbi": 18.0,
+    "system_losses_db": 3.0,
+    "noise_temperature_k": 500.0,
+    "channel_bandwidth_hz": 1000000.0,
+    "implementation_efficiency": 0.1,
+    "required_snr_db": 3.0
+  },
+  "medical_data": [
+    {
+      "id": "archive-001",
+      "data_type": "synthetic_archive_batch",
+      "size_bytes": 3000000,
+      "priority": "LOW",
+      "created_at_s": 0.0,
+      "deadline_s": 6600.0
+    },
+    {
+      "id": "telemetry-001",
+      "data_type": "synthetic_vital_sign_summary",
+      "size_bytes": 600000,
+      "priority": "CRITICAL",
+      "created_at_s": 60.0,
+      "deadline_s": 900.0
+    },
+    {
+      "id": "waveform-001",
+      "data_type": "synthetic_waveform_segment",
+      "size_bytes": 2000000,
+      "priority": "HIGH",
+      "created_at_s": 120.0,
+      "deadline_s": 2400.0
+    },
+    {
+      "id": "image-001",
+      "data_type": "synthetic_medical_image",
+      "size_bytes": 6000000,
+      "priority": "NORMAL",
+      "created_at_s": 300.0,
+      "deadline_s": 7200.0
+    }
+  ]
+}

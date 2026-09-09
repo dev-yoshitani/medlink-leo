@@ -55,3 +55,54 @@ def test_cli_end_to_end_scenario(capsys) -> None:
     assert payload["mode"] == "intermittent"
     assert payload["contact_windows"]
     assert payload["metrics"]["available_capacity_bits"] > 0
+
+
+def test_cli_route(capsys) -> None:
+    args = [
+        "route",
+        "--scenario",
+        "examples/contact_plan_medical_routing.json",
+        "--strategy",
+        "earliest-arrival",
+        "--json",
+    ]
+    assert main(args) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["mode"] == "routing"
+    assert payload["strategy"] == "earliest-arrival"
+    assert payload["contact_plan"]["contact_count"] == 5
+    assert payload["metrics"]["delivered_count"] == 3
+
+
+def test_cli_route_compare_json_is_deterministic(capsys) -> None:
+    args = [
+        "route-compare",
+        "--scenario",
+        "examples/contact_plan_medical_routing.json",
+        "--json",
+    ]
+    assert main(args) == 0
+    first = capsys.readouterr().out
+    assert main(args) == 0
+    second = capsys.readouterr().out
+    assert first == second
+    payload = json.loads(first)
+    assert [entry["strategy"] for entry in payload["strategies"]] == [
+        "next-contact",
+        "earliest-arrival",
+        "deadline-aware",
+    ]
+
+
+def test_cli_rejects_routing_scenario_for_scheduler_command(capsys) -> None:
+    assert (
+        main(
+            [
+                "compare",
+                "--scenario",
+                "examples/contact_plan_medical_routing.json",
+            ]
+        )
+        == 2
+    )
+    assert "route-compare" in capsys.readouterr().err

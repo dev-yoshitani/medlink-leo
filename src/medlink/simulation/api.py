@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from medlink.orbit import find_contact_windows
-from medlink.scenarios import FixedScenario, Scenario
+from medlink.scenarios import FixedScenario, IntermittentScenario, Scenario
 from medlink.scheduling import SCHEDULER_ORDER, Strategy
 from medlink.simulation.fixed import ComparisonReport
 from medlink.simulation.fixed import SimulationReport as FixedSimulationReport
@@ -20,6 +20,8 @@ SimulationReport = FixedSimulationReport | IntermittentSimulationReport
 def simulate(scenario: Scenario, strategy: Strategy | str) -> SimulationReport:
     if isinstance(scenario, FixedScenario):
         return simulate_fixed(scenario, strategy)
+    if not isinstance(scenario, IntermittentScenario):
+        raise ValueError("routing scenarios require the 'route' command or routing API")
     return simulate_intermittent(scenario, strategy)
 
 
@@ -27,6 +29,10 @@ def compare_strategies(scenario: Scenario) -> ComparisonReport:
     if isinstance(scenario, FixedScenario):
         reports = tuple(simulate_fixed(scenario, strategy) for strategy in SCHEDULER_ORDER)
     else:
+        if not isinstance(scenario, IntermittentScenario):
+            raise ValueError(
+                "routing scenarios require the 'route-compare' command or routing API"
+            )
         windows = find_contact_windows(
             scenario.tle,
             scenario.ground_station,

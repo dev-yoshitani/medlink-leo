@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.1",
+  "config_id": "routing-smoke-v1.1",
+  "base_scenario": "../../examples/contact_plan_medical_routing.json",
+  "offered_load_factors": [1.0],
+  "deadline_factors": [1.0],
+  "backhaul_factors": [1.0],
+  "minimum_elevation_degs": [10.0],
+  "rf_efficiency_factors": [1.0]
+}

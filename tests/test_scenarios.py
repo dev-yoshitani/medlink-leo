@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from medlink.scenarios import load_scenario
+from medlink.scenarios import RoutingScenario, load_scenario
 
 
 def test_load_basic_scenario() -> None:
@@ -21,6 +21,23 @@ def test_load_end_to_end_scenario() -> None:
     assert scenario.scenario_id == "tokyo-iss-synthetic-v0.4"
     assert scenario.horizon_s == 6_900
     assert scenario.tle.satellite_name == "ISS (ZARYA)"
+
+
+def test_load_contact_plan_routing_scenario() -> None:
+    scenario = load_scenario(Path("examples/contact_plan_medical_routing.json"))
+    assert isinstance(scenario, RoutingScenario)
+    assert scenario.scenario_id == "east-asia-contact-plan-synthetic-v1.1"
+    assert scenario.horizon_s == 6_900
+    assert [station.id for station in scenario.ground_stations] == [
+        "gs-seoul",
+        "gs-sapporo",
+        "gs-tokyo",
+    ]
+    assert [station.backhaul_delay_s for station in scenario.ground_stations] == [
+        180.0,
+        45.0,
+        5.0,
+    ]
 
 
 def test_duplicate_ids_are_rejected(tmp_path: Path) -> None:

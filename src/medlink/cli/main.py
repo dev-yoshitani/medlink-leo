@@ -8,8 +8,15 @@ import sys
 from collections.abc import Sequence
 from typing import Any
 
-from medlink.experiments import run_benchmark
-from medlink.scenarios import load_scenario
+from medlink.experiments import run_benchmark, run_routing_benchmark
+from medlink.routing import (
+    RoutingComparisonReport,
+    RoutingReport,
+    RoutingStrategy,
+    compare_routing_strategies,
+    route_scenario,
+)
+from medlink.scenarios import RoutingScenario, load_scenario
 from medlink.scheduling import Strategy
 from medlink.simulation import ComparisonReport, SimulationReport, compare_strategies, simulate
 
@@ -38,6 +45,21 @@ def _format_comparison(report: ComparisonReport) -> str:
     return "\n".join(_format_metrics(strategy_report) for strategy_report in report.reports) + "\n"
 
 
+def _format_routing(report: RoutingReport) -> str:
+    metrics = report.metrics
+    return (
+        f"routing_strategy={report.strategy.value} "
+        f"delivered={metrics.delivered_count}/{metrics.total_items} "
+        f"deadline_rate={metrics.deadline_satisfaction_rate:.3f} "
+        f"average_end_to_end_latency_s={metrics.average_end_to_end_latency_s:.3f} "
+        f"contact_utilization={metrics.contact_utilization:.3f}\n"
+    )
+
+
+def _format_routing_comparison(report: RoutingComparisonReport) -> str:
+    return "".join(_format_routing(strategy_report) for strategy_report in report.reports)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="medlink", description="MedLink-LEO simulator")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -53,11 +75,34 @@ def build_parser() -> argparse.ArgumentParser:
     compare_parser.add_argument("--scenario", required=True)
     compare_parser.add_argument("--json", action="store_true", dest="as_json")
 
+    route_parser = subparsers.add_parser(
+        "route", help="route synthetic medical items over a generated contact plan"
+    )
+    route_parser.add_argument("--scenario", required=True)
+    route_parser.add_argument(
+        "--strategy", required=True, choices=[item.value for item in RoutingStrategy]
+    )
+    route_parser.add_argument("--json", action="store_true", dest="as_json")
+
+    route_compare_parser = subparsers.add_parser(
+        "route-compare", help="compare all contact-plan routing strategies"
+    )
+    route_compare_parser.add_argument("--scenario", required=True)
+    route_compare_parser.add_argument("--json", action="store_true", dest="as_json")
+
     benchmark_parser = subparsers.add_parser("benchmark", help="run a benchmark matrix")
     benchmark_parser.add_argument("--config", required=True)
     benchmark_parser.add_argument("--output-dir", required=True)
     benchmark_parser.add_argument("--publish-dir")
     benchmark_parser.add_argument("--json", action="store_true", dest="as_json")
+
+    routing_benchmark_parser = subparsers.add_parser(
+        "routing-benchmark", help="run the contact-plan routing benchmark matrix"
+    )
+    routing_benchmark_parser.add_argument("--config", required=True)
+    routing_benchmark_parser.add_argument("--output-dir", required=True)
+    routing_benchmark_parser.add_argument("--publish-dir")
+    routing_benchmark_parser.add_argument("--json", action="store_true", dest="as_json")
     return parser
 
 
@@ -65,8 +110,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     try:
-        if args.command == "benchmark":
-            benchmark = run_benchmark(args.config, args.output_dir, args.publish_dir)
+        if args.command in {"benchmark", "routing-benchmark"}:
+            benchmark = (
+                run_benchmark(args.config, args.output_dir, args.publish_dir)
+                if args.command == "benchmark"
+                else run_routing_benchmark(args.config, args.output_dir, args.publish_dir)
+            )
             output = (
                 _json(benchmark.to_dict())
                 if args.as_json
@@ -76,7 +125,24 @@ def main(argv: Sequence[str] | None = None) -> int:
             sys.stdout.write(output)
             return 0
         scenario = load_scenario(args.scenario)
-        if args.command == "simulate":
+        if args.command in {"route", "route-compare"}:
+            if not isinstance(scenario, RoutingScenario):
+                raise ValueError("route commands require a routing-mode scenario")
+            if args.command == "route":
+                routing_report = route_scenario(scenario, args.strategy)
+                output = (
+                    _json(routing_report.to_dict())
+                    if args.as_json
+                    else _format_routing(routing_report)
+                )
+            else:
+                routing_comparison = compare_routing_strategies(scenario)
+                output = (
+                    _json(routing_comparison.to_dict())
+                    if args.as_json
+                    else _format_routing_comparison(routing_comparison)
+                )
+        elif args.command == "simulate":
             report = simulate(scenario, args.strategy)
             output = _json(report.to_dict()) if args.as_json else _format_metrics(report) + "\n"
         else:
