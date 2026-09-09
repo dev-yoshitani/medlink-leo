@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import tomllib
 from pathlib import Path
 
@@ -77,3 +78,21 @@ def test_publication_license_is_consistent() -> None:
     assert "Copyright (c) 2026 yoshitani-dev" in license_text
     assert project["license"] == "MIT"
     assert project["license-files"] == ["LICENSE"]
+
+
+def test_relative_markdown_links_resolve() -> None:
+    root = Path(__file__).resolve().parents[1]
+    markdown_files = (root / "README.md", *sorted((root / "docs").glob("*.md")))
+    pattern = re.compile(r"!?\[[^]]*\]\(([^)]+)\)")
+    broken: list[str] = []
+
+    for source in markdown_files:
+        for target in pattern.findall(source.read_text(encoding="utf-8")):
+            clean_target = target.strip().split("#", 1)[0]
+            if not clean_target or "://" in clean_target or clean_target.startswith("mailto:"):
+                continue
+            resolved = (source.parent / clean_target).resolve()
+            if not resolved.exists():
+                broken.append(f"{source.relative_to(root)} -> {target}")
+
+    assert broken == []

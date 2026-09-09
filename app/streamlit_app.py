@@ -287,6 +287,9 @@ def _render_routing_demo() -> None:
                 format="%.1f%%"
             ),
             "Delivery ratio (%)": st.column_config.NumberColumn(format="%.1f%%"),
+            "Mean end-to-end latency (s)": st.column_config.NumberColumn(
+                format="%.1f s"
+            ),
             "Contact utilization (%)": st.column_config.NumberColumn(format="%.1f%%"),
         },
     )
@@ -309,6 +312,12 @@ def _render_routing_demo() -> None:
         _routing_result_frame(selected_report),
         hide_index=True,
         width="stretch",
+        column_config={
+            "RF departure (s)": st.column_config.NumberColumn(format="%.1f s"),
+            "Hospital arrival (s)": st.column_config.NumberColumn(format="%.1f s"),
+            "Deadline (s)": st.column_config.NumberColumn(format="%.1f s"),
+            "Deadline margin (s)": st.column_config.NumberColumn(format="%.1f s"),
+        },
     )
 
     selected_item_id = st.selectbox(
@@ -332,6 +341,12 @@ def _render_routing_demo() -> None:
         _candidate_frame(selected_result),
         hide_index=True,
         width="stretch",
+        column_config={
+            "Next Contact": st.column_config.NumberColumn(format="%.1f s"),
+            "Capacity (Mbit)": st.column_config.NumberColumn(format="%.2f Mbit"),
+            "Backhaul (s)": st.column_config.NumberColumn(format="%.0f s"),
+            "Estimated Arrival (s)": st.column_config.NumberColumn(format="%.1f s"),
+        },
     )
     st.caption(
         "The table shows explicit seconds and bits-derived capacity. Yes/No labels accompany "
@@ -343,6 +358,15 @@ def _render_routing_demo() -> None:
         _routing_contact_frame(selected_report),
         hide_index=True,
         width="stretch",
+        column_config={
+            "Start (s)": st.column_config.NumberColumn(format="%.1f s"),
+            "End (s)": st.column_config.NumberColumn(format="%.1f s"),
+            "Duration (s)": st.column_config.NumberColumn(format="%.1f s"),
+            "Capacity (Mbit)": st.column_config.NumberColumn(format="%.2f Mbit"),
+            "Propagation (ms)": st.column_config.NumberColumn(format="%.2f ms"),
+            "Backhaul (s)": st.column_config.NumberColumn(format="%.0f s"),
+            "Maximum elevation (deg)": st.column_config.NumberColumn(format="%.1f°"),
+        },
     )
     st.caption(
         "Each capacity is integrated from the existing SGP4 range and RF link-budget model "
