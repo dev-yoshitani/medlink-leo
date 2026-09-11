@@ -1,8 +1,8 @@
 # Deployment
 
-The Streamlit application is prepared for Streamlit Community Cloud and local/container use. No
-public URL is claimed because repository publication and deployment authentication require a
-separate user-authorized action.
+The Streamlit application is prepared for Streamlit Community Cloud and local/container use from
+the public repository at `https://github.com/dev-yoshitani/medlink-leo`. No public demo URL is
+claimed because Streamlit deployment still requires interactive service authentication.
 
 ## Compatibility summary
 
@@ -27,8 +27,7 @@ mode; Existing Simulation preserves the v1.0 demo.
 
 ## Streamlit Community Cloud
 
-After the repository is intentionally made public or otherwise accessible to the authorized
-Streamlit account:
+Using the public `dev-yoshitani/medlink-leo` repository:
 
 1. In Streamlit Community Cloud, create an app from this repository and the intended release
    branch.
@@ -56,6 +55,5 @@ for Community Cloud and is not a default-demo dependency.
 
 Community Cloud executes from the repository root, so all runtime paths are derived from the app
 file rather than the current working directory. Ephemeral storage is sufficient because the app
-reads bundled fixtures and writes no required persistent state. A public deployment still depends
-on repository visibility and interactive service authentication; neither is performed by local
-release preparation.
+reads bundled fixtures and writes no required persistent state. Public deployment still depends
+on interactive Streamlit service authentication and app creation.

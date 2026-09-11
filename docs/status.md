@@ -38,8 +38,8 @@ v1.1 — implementation-complete Release Candidate
 - Markdown relative-link test: passed for README and top-level docs.
 - Security: no tracked `.env`, PEM, or key files; no hard secret pattern in the tree or reachable
   Git history; no machine-specific path; scenario records are explicitly synthetic.
-- GitHub Actions retains `permissions: contents: read` and official pinned actions. No remote run
-  is claimed.
+- GitHub Actions retains `permissions: contents: read` and official pinned actions. Remote run
+  `34598054420` passed install, Ruff, and pytest on Python 3.11 and 3.12.
 - Docker CLI is unavailable; Dockerfile and build context were reviewed, but build/runtime were not
   executed.
 
@@ -58,8 +58,10 @@ v1.1 — implementation-complete Release Candidate
 - Full DTN/BPv7, store-carry-forward contact splitting, preemptive scheduling, multi-satellite
   routing, inter-satellite links, and adaptive RF/MCS remain out of scope.
 - Docker runtime verification is unavailable in this environment.
-- The repository has no remote. GitHub CLI identifies `yoshitani-dev`, but its saved token is
-  invalid, so remote CI, GitHub rendering, and public Streamlit deployment were not attempted.
+- The repository is public at `https://github.com/dev-yoshitani/medlink-leo`; `origin/main` and the
+  v1.1 feature branch point to the same verified release-candidate history.
+- Public Streamlit deployment has not been performed because it requires interactive Streamlit
+  Community Cloud authentication and app creation.
 
 ## Git
 
@@ -72,8 +74,7 @@ v1.1 — implementation-complete Release Candidate
 
 ## Next
 
-1. Reauthenticate GitHub CLI and create or select the intended remote without rewriting history.
-2. With explicit authorization, push this branch and observe remote CI/rendering.
-3. With explicit authorization, make the repository public and deploy `app/streamlit_app.py` on
-   Streamlit Community Cloud; verify the deployed URL before adding it to README.
-4. Merge, tag, and create a GitHub Release only after separate final-release authorization.
+1. Create the authorized `v1.1.0` tag and GitHub Release after this publication checkpoint passes
+   remote CI.
+2. Sign in to Streamlit Community Cloud, deploy `app/streamlit_app.py` from `main`, and verify the
+   deployed URL before adding a Live Demo link to README.

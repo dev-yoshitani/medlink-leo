@@ -2,6 +2,8 @@
 
 Reliable medical-data delivery over constrained LEO satellite links.
 
+[![quality](https://github.com/dev-yoshitani/medlink-leo/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/dev-yoshitani/medlink-leo/actions/workflows/ci.yml)
+
 MedLink-LEO is a deterministic engineering simulator for routing deadline-constrained synthetic
 medical data through intermittent LEO contacts. It combines frozen-TLE SGP4 propagation,
 ground-station visibility, an RF link budget, contact-capacity integration, medical-item
@@ -210,7 +212,8 @@ Coverage includes validation, RF reference calculations, frozen-orbit contacts, 
 contact-plan construction, three routing policies, backhaul-sensitive selection, capacity
 contention, deterministic tie-breaking, failure reasons, CLI JSON, both benchmarks, and Streamlit
 AppTest. `.github/workflows/ci.yml` runs install, Ruff, and pytest on Python 3.11 and 3.12 with
-`contents: read`. Remote CI is not claimed because this branch has not been pushed.
+`contents: read`. The published `main` workflow is verified green in
+[GitHub Actions](https://github.com/dev-yoshitani/medlink-leo/actions/workflows/ci.yml).
 
 ## Repository structure
 
