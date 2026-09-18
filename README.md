@@ -15,14 +15,14 @@ backhaul, while multiple queued items contend for one satellite radio.
 
 ## 日本語での概要
 
-低軌道衛星との通信が途切れる条件で、模擬医療データを期限内に届ける方法を比較する工学シミュレーターです。
-Pythonで軌道伝播、地上局の可視時間、RFリンクバジェット、送信順序、配送経路をつなぎ、結果と選択理由を確認できます。
+低軌道衛星との通信が断続する条件下で、模擬医療データを期限内に届ける配送手法を比較・評価する工学シミュレーターです。
+Python上で軌道伝播、地上局の可視時間、RFリンクバジェット、送信順序、配送経路のモデルを統合し、シミュレーション結果と選択理由を確認できます。
 
-- **比較するもの:** データの送信順序と、複数地上局への配送経路。期限内到着率・配送率・遅延を評価します。
+- **評価対象:** 送信データの優先順序と、複数地上局への配送経路。期限内達成率、配送率、遅延を評価します。
 - **確認できる成果物:** [設計](docs/architecture.md)、[数式・単位](docs/equations.md)、[評価方法と限界](docs/methodology.md)、[ベンチマーク結果](docs/assets/routing-benchmark/summary.md)、[テスト](tests/)。
-- **試す:** [Streamlitデモの起動手順](#interactive-demo)。合成データと固定した過去の軌道データを使用し、APIキーなしで動作します。
+- **実行手順:** [Streamlitデモの起動手順](#interactive-demo)。合成データと固定した過去の軌道データを用い、APIキー不要でオフライン動作します。
 
-実衛星での通信実証や臨床利用を目的とするものではありません。モデルの前提は[Assumptions](docs/assumptions.md)に記載しています。
+※実衛星での通信実証や臨床利用を目的とするものではありません。モデルの前提条件や制限事項は [Assumptions](docs/assumptions.md) に記載しています。
 
 ## Contact-Plan-Aware Medical Routing — new in v1.1
 
