@@ -43,7 +43,9 @@ Environment: Windows, Python 3.12.14. This records actual checks, not future exp
 - Docker CLI is unavailable on the local host; container execution is assigned to the CI job.
 - Streamlit Community Cloud sign-in is required. No public demo URL is claimed until an actual
   deployment and browser check succeed. [Deployment procedure](deployment.md).
-- Main was unprotected when inspected at task start; protection setup is tracked with the PR.
+- Main protection was applied with the maintainer's explicit approval: PR required, current-base
+  Python 3.11/3.12 and Docker smoke checks, conversation resolution and administrator enforcement;
+  force pushes/deletion are prohibited. External approval count is zero for solo maintenance.
 - The maintainer's human review and final acceptance are not represented by automated tests.
   [Review questions](ai-assisted-development.md).
 
