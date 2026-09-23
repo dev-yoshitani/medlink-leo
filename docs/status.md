@@ -4,8 +4,9 @@
 
 - [v1.1.0 is already published](https://github.com/dev-yoshitani/medlink-leo/releases/tag/v1.1.0).
   Its tag resolves to `87d93d9c82ef94886ca545f67f6f08af14c2871f`; it is not a pending RC.
-- This portfolio improvement branches from public main `09d902dc92fcecce87d1d84651370c52a35c80a4`.
-  It is an unreleased change set; package/model version remains 1.1.0. No new release is claimed.
+- Portfolio hardening was merged into `main` by [PR #4](https://github.com/dev-yoshitani/medlink-leo/pull/4)
+  at `da5930df6a8bbf1f2d955c5884d61ebdac2f0b9d`. It remains unreleased; the package/model
+  version is 1.1.0 and no newer tag or release is claimed.
 - Historical v1.0 benchmark artifacts retain 1.0.0 provenance; v1.1 routing artifacts retain
   1.1.0. These are deliberate historical labels, not stale current-status claims.
 
@@ -38,16 +39,22 @@ Environment: Windows, Python 3.12.14. This records actual checks, not future exp
 
 ## External verification and remaining work
 
-- [PR #4](https://github.com/dev-yoshitani/medlink-leo/pull/4) links the implementation to
-  engineering Issues #1, #2 and #3.
-- [CI checkpoint bceca42](https://github.com/dev-yoshitani/medlink-leo/actions/runs/35802093909)
-  passed Python 3.11/3.12 (tests, typing, canonical reproduction and packaging) and Docker smoke.
-  Read the PR's latest checks for later commits; the older release's CI is not used as evidence.
+- Merged [PR #4](https://github.com/dev-yoshitani/medlink-leo/pull/4) links the implementation
+  to engineering Issues #1, #2 and #3.
+- [Post-merge `main` CI](https://github.com/dev-yoshitani/medlink-leo/actions/runs/35823073555)
+  passed Python 3.11/3.12 (tests, typing, canonical reproduction and packaging) and Docker smoke
+  for merge commit `da5930d`. The older release's CI is not used as evidence for this change.
 - Docker CLI is unavailable locally. The remote job built the non-root container and passed
   HTTP health/root plus real Streamlit AppTest. The first run exposed a startup connection-reset
   race; bounded retry was corrected with regression tests while retaining all content assertions.
-- Streamlit Community Cloud sign-in is required. No public demo URL is claimed until an actual
-  deployment and browser check succeed. [Deployment procedure](deployment.md).
+- [Public Streamlit demo](https://medlink-leo.streamlit.app/) was deployed from `main` at
+  `da5930df6a8bbf1f2d955c5884d61ebdac2f0b9d` with Python 3.12 and no Secrets. Browser
+  checks on 2026-09-24 JST confirmed the safety notice, three-policy routing comparison,
+  station/candidate table, strategy and item switching with persistent results, a failure
+  reason, and the Existing Simulation result. The JSON download triggered a browser download;
+  its downloaded bytes were not separately inspected. An anonymous HTTP request that retained
+  cookies through Streamlit's authentication redirect returned 200 at the public URL, with no
+  login page. [Deployment details](deployment.md).
 - Main protection was applied with the maintainer's explicit approval: PR required, current-base
   Python 3.11/3.12 and Docker smoke checks, conversation resolution and administrator enforcement;
   force pushes/deletion are prohibited. External approval count is zero for solo maintenance.
