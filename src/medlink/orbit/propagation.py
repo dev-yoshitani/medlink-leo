@@ -11,6 +11,7 @@ from typing import Any
 
 from skyfield.api import EarthSatellite, load, wgs84
 
+from medlink._validation import required_field
 from medlink.orbit.models import (
     ContactWindow,
     FrozenTLE,
@@ -58,11 +59,11 @@ def load_tle_json(path: str | Path) -> FrozenTLE:
     if not isinstance(payload, dict):
         raise ValueError("TLE fixture must be a JSON object")
     return FrozenTLE(
-        satellite_name=payload.get("satellite_name"),
-        line1=payload.get("line1"),
-        line2=payload.get("line2"),
-        epoch_utc=parse_utc(payload.get("epoch_utc"), "epoch_utc"),
-        source_url=payload.get("source_url"),
+        satellite_name=required_field(payload, "satellite_name"),
+        line1=required_field(payload, "line1"),
+        line2=required_field(payload, "line2"),
+        epoch_utc=parse_utc(required_field(payload, "epoch_utc"), "epoch_utc"),
+        source_url=required_field(payload, "source_url"),
         source_note=payload.get("source_note", ""),
     )
 

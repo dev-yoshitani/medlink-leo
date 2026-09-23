@@ -1,80 +1,55 @@
-# MedLink-LEO v1.1 Release Candidate status
+# MedLink-LEO status
 
-## Current Milestone
+## Release versus development
 
-v1.1 — implementation-complete Release Candidate
+- [v1.1.0 is already published](https://github.com/dev-yoshitani/medlink-leo/releases/tag/v1.1.0).
+  Its tag resolves to `87d93d9c82ef94886ca545f67f6f08af14c2871f`; it is not a pending RC.
+- This portfolio improvement branches from public main `09d902dc92fcecce87d1d84651370c52a35c80a4`.
+  It is an unreleased change set; package/model version remains 1.1.0. No new release is claimed.
+- Historical v1.0 benchmark artifacts retain 1.0.0 provenance; v1.1 routing artifacts retain
+  1.1.0. These are deliberate historical labels, not stale current-status claims.
 
-## Completed
+## Portfolio improvements
 
-- Preserved all v1.0 schedulers, fixed/intermittent simulation, orbit/RF behavior, benchmark
-  evidence, and Web mode.
-- Added a shared orbit-to-capacity integrator and deterministic three-station Contact Plan.
-- Added separate Next Contact, Earliest Arrival, and Deadline-Aware routing over the existing item
-  scheduler, with single-radio contention and four explicit failure reasons.
-- Added route/route-compare CLI JSON, a synthetic example, a separate 216-run benchmark, and
-  committed generated evidence.
-- Added a routing-first Streamlit experience with route explanations and a Ground Station
-  comparison table, while preserving Existing Simulation mode.
-- Updated package metadata to 1.1.0 and prepared root dependencies, theme configuration,
-  Docker context, and deployment instructions for Streamlit Community Cloud.
+- Streamlit result persistence across strategy/item/mode changes, explanatory guidance,
+  delivered-only latency labeling, and downloadable routing JSON.
+- Independent Pyorbital implementation comparison across 1,441 near-epoch samples, three
+  stations, two masks and 27 contacts. See [validation](validation.md).
+- Added per-item evidence and factor/condition/item matched analysis without changing the
+  canonical experiment or original summary. See [interpretation](benchmark-analysis.md).
+- Added ADRs, AI-assistance disclosure, review guidance, Issue/PR templates and contribution steps.
+- Added mypy, dependency checks, wheel/sdist checks and Docker HTTP/AppTest CI.
 
-## Verification
+## Verification observed locally
 
-- `python -m pip install -e ".[dev]"`: passed; editable 1.1.0 installed.
-- `python -m pip check`: no broken requirements.
-- `python -m pytest`: 89 passed on Python 3.12.14.
-- `python -m ruff check .`: passed.
-- Fixed and intermittent CLI commands: passed; each JSON comparison matched across two runs.
-- Next Contact, Earliest Arrival, Deadline-Aware, and route comparison CLI: passed; routing JSON
-  matched across two runs.
-- v1.0 canonical benchmark: 108 runs completed twice; raw and summary outputs matched. Raw
-  SHA-256 remains `501C2A32BC426E44A2E68F38D47CAEEBC701D16CE676B1AA4943143D4B46129E`.
-- v1.1 canonical routing benchmark: 216 runs completed twice; raw and summary outputs matched.
-  Raw SHA-256 is `E97E43F7C1E28E1A4300A32698B773F134A7C980A19868CFC39E5D1CFBD8AD24`.
-- Committed v1.0 and v1.1 summary evidence matches the final regenerated files byte-for-byte.
-- Streamlit: routing and existing-simulation AppTests passed; bounded headless health/root checks
-  returned HTTP 200 and the process stopped; local browser review verified layout, labels, units,
-  Ground Station comparison, and Why this route?.
-- Markdown relative-link test: passed for README and top-level docs.
-- Security: no tracked `.env`, PEM, or key files; no hard secret pattern in the tree or reachable
-  Git history; no machine-specific path; scenario records are explicitly synthetic.
-- GitHub Actions retains `permissions: contents: read` and official pinned actions. Remote run
-  `34598054420` passed install, Ruff, and pytest on Python 3.11 and 3.12.
-- Docker CLI is unavailable; Dockerfile and build context were reviewed, but build/runtime were not
-  executed.
+Environment: Windows, Python 3.12.14. This records actual checks, not future expectations.
 
-## Assumptions Added
+- Full pytest suite: 98 passed.
+- mypy: 32 source files passed; Ruff and `pip check`: passed.
+- Independent comparison passed the predeclared tolerances; maximum rise/set discrepancy
+  0.232256 s. Reference/library versions and all errors are in the committed JSON.
+- 216-run raw CSV SHA-256 equals the released value:
+  `e97e43f7c1e28e1a4300a32698b773f134a7c980a19868cfc39e5d1cfbd8ad24`.
+- Original v1.0 and v1.1 summary files have not been edited.
+- Isolated sdist/wheel build passed. Installing the wheel into a separate target and executing
+  outside the checkout loaded the bundled TLE and ran the Deadline-Aware CLI successfully.
+- Streamlit root/health returned HTTP 200; a browser check confirmed routing results, layout
+  and strategy changes preserve the displayed results. AppTest covers both modes and item changes.
 
-- Synthetic items are available on the satellite at `created_at_s`; clinic uplink is abstracted.
-- One satellite radio serves one item at a time. A selected route uses one contact and does not
-  split or resume the item across stations.
-- RF completion advances the radio clock; terrestrial backhaul changes hospital arrival but does
-  not occupy the radio.
-- EDF is held constant in the v1.1 routing benchmark so route policies receive matched item order.
+## External verification and remaining work
 
-## Known Limitations
+- Remote CI for this change must be read from its PR/check runs; the older release's green CI
+  is not evidence for new code.
+- Docker CLI is unavailable on the local host; container execution is assigned to the CI job.
+- Streamlit Community Cloud sign-in is required. No public demo URL is claimed until an actual
+  deployment and browser check succeed. [Deployment procedure](deployment.md).
+- Main was unprotected when inspected at task start; protection setup is tracked with the PR.
+- The maintainer's human review and final acceptance are not represented by automated tests.
+  [Review questions](ai-assisted-development.md).
 
-- Routing is deterministic and greedy rather than globally optimal.
-- Full DTN/BPv7, store-carry-forward contact splitting, preemptive scheduling, multi-satellite
-  routing, inter-satellite links, and adaptive RF/MCS remain out of scope.
-- Docker runtime verification is unavailable in this environment.
-- The repository is public at `https://github.com/dev-yoshitani/medlink-leo`; `origin/main` and the
-  v1.1 feature branch point to the same verified release-candidate history.
-- Public Streamlit deployment has not been performed because it requires interactive Streamlit
-  Community Cloud authentication and app creation.
+## Model boundary retained
 
-## Git
-
-- Base v1.0 RC HEAD: `d754d13`
-- Branch: `feat/medlink-leo-v1.1-routing`
-- Routing-core checkpoint: `d18c7e7`
-- UI/evidence checkpoint: `8e62be3`
-- Final RC checkpoint: this commit
-- Working tree: expected clean after the final checkpoint
-
-## Next
-
-1. Create the authorized `v1.1.0` tag and GitHub Release after this publication checkpoint passes
-   remote CI.
-2. Sign in to Streamlit Community Cloud, deploy `app/streamlit_app.py` from `main`, and verify the
-   deployed URL before adding a Live Demo link to README.
+Synthetic data, frozen historical TLE, one satellite/radio, EDF ordering and greedy one-contact
+routing are retained. No full DTN/BPv7, contact splitting, preemption, ISLs, adaptive RF/MCS,
+real medical operations or measured satellite validation is claimed. The clinic uplink remains
+abstracted; RF completion occupies the radio, while backhaul affects only hospital arrival.

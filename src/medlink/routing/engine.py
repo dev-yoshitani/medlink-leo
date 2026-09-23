@@ -91,6 +91,7 @@ def _selection_reason(
     eligible: list[RouteCandidate],
     strategy: RoutingStrategy,
 ) -> str:
+    assert selected.estimated_arrival_s is not None
     if strategy is RoutingStrategy.NEXT_CONTACT:
         basis = (
             f"Selected {selected.ground_station_id} / {selected.contact_id} because it offers "
@@ -113,6 +114,7 @@ def _selection_reason(
         )
     if len(eligible) > 1 and strategy is not RoutingStrategy.NEXT_CONTACT:
         runner_up = sorted(eligible, key=lambda value: _candidate_rank(value, strategy))[1]
+        assert runner_up.estimated_arrival_s is not None
         delta = float(runner_up.estimated_arrival_s) - float(selected.estimated_arrival_s)
         basis += f" The next-best feasible route arrives {delta:.3f} s later."
     return basis
@@ -240,6 +242,7 @@ def _route_item(
                 candidates=candidates,
             )
     selected = min(eligible, key=lambda value: _candidate_rank(value, strategy))
+    assert selected.estimated_arrival_s is not None
     marked = tuple(
         replace(candidate, selected=candidate.contact_id == selected.contact_id)
         for candidate in candidates
@@ -277,7 +280,11 @@ def _metrics(
 ) -> RoutingMetrics:
     delivered = [result for result in results if result.delivered]
     critical = [result for result in results if result.priority is Priority.CRITICAL]
-    latencies = [float(result.latency_s) for result in delivered]
+    latencies: list[float] = []
+    for result in delivered:
+        latency = result.latency_s
+        assert latency is not None
+        latencies.append(latency)
     transferred = sum(result.capacity_required_bits for result in delivered)
     selection = {
         station.id: sum(result.selected_ground_station == station.id for result in delivered)

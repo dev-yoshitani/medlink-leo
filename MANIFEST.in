@@ -1,0 +1,7 @@
+include requirements.txt Dockerfile
+recursive-include app *.py
+recursive-include examples *.json
+recursive-include experiments *.json
+recursive-include .streamlit *.toml
+recursive-include docs *.md *.json *.csv *.png
+recursive-include scripts *.py

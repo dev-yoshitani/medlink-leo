@@ -1,0 +1,4 @@
+baseline,candidate,matched_conditions,deadline_delta_mean_pp,deadline_wins_ties_losses,delivery_delta_mean_pp,common_delivered_items,baseline_only_items,candidate_only_items,neither_delivered_items,common_item_latency_delta_mean_s,common_item_latency_delta_median_s,common_item_latency_delta_min_s,common_item_latency_delta_max_s,conditions_with_common_items,condition_weighted_common_latency_delta_s
+next-contact,earliest-arrival,72,0.0,"[0, 72, 0]",0.0,216,0,0,72,-17.65867205030957,0.0,-300.64750506772805,8.573542608144862,72,-15.361826828808761
+next-contact,deadline-aware,72,0.0,"[0, 72, 0]",-6.944444444444445,196,20,0,72,-18.846428100449035,0.0,-300.64750506772805,8.573542608144862,72,-15.628921633845668
+earliest-arrival,deadline-aware,72,0.0,"[0, 72, 0]",-6.944444444444445,196,20,0,72,0.0,0.0,0.0,0.0,72,0.0

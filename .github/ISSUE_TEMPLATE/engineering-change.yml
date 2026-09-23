@@ -1,0 +1,22 @@
+name: Engineering change
+description: Trace an engineering question to measurable acceptance criteria.
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem and model boundary
+      description: State the engineering question, affected assumptions, and exclusions.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Acceptance evidence
+      description: Specify reference method, units, tolerance, test commands, and artifacts.
+    validations:
+      required: true
+  - type: textarea
+    id: decisions
+    attributes:
+      label: Design decisions and risks
+      description: Link an ADR if a model or architecture decision changes.

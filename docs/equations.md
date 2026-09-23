@@ -1,6 +1,7 @@
 # Link equations and units
 
-MedLink-LEO v0.2 uses a static free-space RF link abstraction. It is not a detailed
+MedLink-LEO v1.1 retains the free-space RF link abstraction introduced in v0.2 and evaluates
+it at the orbit-derived range for dynamic contact capacity. It is not a detailed
 modulation, coding, atmospheric, fading, or protocol-throughput model.
 
 ## Free-space path loss

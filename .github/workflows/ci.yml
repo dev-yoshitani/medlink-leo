@@ -32,5 +32,49 @@ jobs:
       - name: Lint
         run: python -m ruff check .
 
+      - name: Check dependencies and types
+        run: |
+          python -m pip check
+          python -m mypy
+
       - name: Test
         run: python -m pytest
+
+      - name: Reproduce canonical evidence
+        run: python scripts/check_evidence.py
+
+      - name: Build sdist and wheel, then test installed package outside checkout
+        run: |
+          python -m build
+          python -m pip install --force-reinstall --no-deps dist/*.whl
+          cd "$RUNNER_TEMP"
+          python -c "from importlib.metadata import version; import medlink; from medlink.orbit import load_bundled_tle; assert medlink.__version__ == version('medlink-leo'); assert load_bundled_tle().satellite_name == 'ISS (ZARYA)'; print(medlink.__file__)"
+          python -m medlink --help
+
+  container:
+    name: Docker smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Build and start demo
+        run: |
+          docker build -t medlink-demo .
+          docker run -d --name medlink-ci -p 8501:8501 medlink-demo
+      - name: Verify bounded HTTP health and real app execution
+        run: |
+          python3 scripts/check_demo_http.py
+          docker exec -i medlink-ci python - <<'PY'
+          from streamlit.testing.v1 import AppTest
+          app = AppTest.from_file('/app/app/streamlit_app.py', default_timeout=60).run()
+          assert not app.exception
+          app.button(key='compare_routing').click().run()
+          assert not app.exception
+          assert any('Routing comparison complete' in value.value for value in app.success)
+          app.selectbox(key='routing_strategy').set_value('deadline-aware').run()
+          assert any('Route decisions — deadline-aware' == value.value for value in app.subheader)
+          PY
+      - name: Logs and cleanup
+        if: always()
+        run: |
+          docker logs medlink-ci || true
+          docker rm -f medlink-ci || true
