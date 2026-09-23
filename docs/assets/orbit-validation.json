@@ -1,0 +1,69 @@
+{
+  "scope": "cross-implementation agreement, not measured orbit truth",
+  "tle_sha256": "8ab4e3894bbba0c6f66a919f42b15b39253ee6611200b7675b59ae96f7943f51",
+  "versions": {
+    "pyorbital": "1.12.1",
+    "sgp4": "2.27",
+    "skyfield": "1.55",
+    "numpy": "2.4.6"
+  },
+  "start_utc": "2014-01-20T22:23:04+00:00",
+  "end_utc": "2014-01-21T22:23:04+00:00",
+  "sample_count": 1441,
+  "sample_step_s": 60,
+  "max_errors": {
+    "position_m": 0.0020441642713290146,
+    "velocity_m_s": 2.3044576153338803e-06,
+    "elevation_deg": 0.004511332593743589,
+    "azimuth_deg": 0.04142459115118413,
+    "range_m": 44.55859017372131,
+    "event_s": 0.232256
+  },
+  "limits": {
+    "position_m": 100.0,
+    "velocity_m_s": 0.1,
+    "elevation_deg": 0.05,
+    "azimuth_deg": 0.05,
+    "range_m": 500.0,
+    "event_s": 0.5
+  },
+  "contacts": [
+    {
+      "station": "gs-seoul",
+      "mask_deg": 10.0,
+      "contact_count": 6,
+      "max_event_error_s": 0.128566
+    },
+    {
+      "station": "gs-seoul",
+      "mask_deg": 20.0,
+      "contact_count": 2,
+      "max_event_error_s": 0.230619
+    },
+    {
+      "station": "gs-sapporo",
+      "mask_deg": 10.0,
+      "contact_count": 6,
+      "max_event_error_s": 0.232256
+    },
+    {
+      "station": "gs-sapporo",
+      "mask_deg": 20.0,
+      "contact_count": 5,
+      "max_event_error_s": 0.22705
+    },
+    {
+      "station": "gs-tokyo",
+      "mask_deg": 10.0,
+      "contact_count": 5,
+      "max_event_error_s": 0.152112
+    },
+    {
+      "station": "gs-tokyo",
+      "mask_deg": 20.0,
+      "contact_count": 3,
+      "max_event_error_s": 0.137615
+    }
+  ],
+  "passed": true
+}

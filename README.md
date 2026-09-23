@@ -13,6 +13,20 @@ scheduling, and transparent route selection in one tested Python package.
 Different contacts offer different RF capacity, timing, propagation delay, and terrestrial
 backhaul, while multiple queued items contend for one satellite radio.
 
+## Engineering portfolio: start here
+
+| Question | Reviewable evidence |
+| --- | --- |
+| How was the system designed? | [Architecture](docs/architecture.md) and [design decisions](docs/adr/001-preserve-model-boundary.md) |
+| Is the orbit independently checked? | [Pyorbital comparison, tolerances and limits](docs/validation.md) |
+| Are benchmark conclusions fair? | [Factor and matched-item analysis](docs/benchmark-analysis.md) |
+| Does it survive packaging and deployment? | [CI](.github/workflows/ci.yml), [development process](CONTRIBUTING.md), [current status](docs/status.md) |
+| Where did AI help, and who accepts the work? | [AI assistance and maintainer responsibility](docs/ai-assisted-development.md) |
+
+Published release: [v1.1.0](https://github.com/dev-yoshitani/medlink-leo/releases/tag/v1.1.0).
+Portfolio hardening is an **unreleased change set** on the same model version; historical
+benchmark artifacts keep their original version labels. See [interview walkthrough](docs/portfolio-review.md).
+
 ## 日本語での概要
 
 低軌道衛星との通信が断続する条件下で、模擬医療データを期限内に届ける配送手法を比較・評価する工学シミュレーターです。
@@ -62,6 +76,11 @@ Contact delivery count. Deadline-Aware refuses routes estimated to arrive late, 
 the same deadline-satisfaction rate but delivers fewer items. Its lower mean latency is conditional
 on that smaller delivered set. These are scenario-specific tradeoffs, not a universal ranking.
 
+**Matched-item result:** Earliest Arrival and Deadline-Aware have identical latency on all
+196 condition/item pairs they both deliver. Deadline-Aware rejects 20 additional late items.
+Earliest Arrival improves on Next Contact by 17.659 s on the 216 common delivered pairs
+(item-weighted mean). [Inspect factor effects, overlap and per-condition deltas](docs/benchmark-analysis.md).
+
 [Routing benchmark config](experiments/canonical_routing_benchmark.json) ·
 [JSON result](docs/assets/routing-benchmark/summary.json) ·
 [table result](docs/assets/routing-benchmark/summary.md) ·
@@ -104,6 +123,8 @@ The first screen opens **Contact-Plan Routing** with the bundled three-station s
 TLE. One **Compare Routing Strategies** action shows route metrics, contact capacity, station
 backhaul, estimated arrivals, deadline margins, explicit outcomes, and Why this route? evidence.
 The **Existing Simulation** mode preserves the v1.0 scheduler and pause/resume demonstration.
+Results persist while switching strategies and inspecting items; routing JSON can be downloaded.
+The UI explicitly labels delivered-only latency to avoid confusing rejection with speed.
 
 The app is prepared for Streamlit Community Cloud through root `requirements.txt` and
 `app/streamlit_app.py`; no environment variables are required. No public demo URL is claimed.
@@ -183,7 +204,7 @@ Detailed units and sources are in [equations.md](docs/equations.md); fixture pro
 
 ## Quick start and CLI
 
-Python 3.11 or newer is required; Python 3.12 is the verified RC environment.
+Python 3.11 or newer is required; Python 3.12 is the locally verified environment.
 
 ```powershell
 python -m pip install -e ".[dev]"
@@ -217,14 +238,20 @@ Exact factors, held constants, metrics, and interpretation limits are in
 python -m pip check
 python -m pytest
 python -m ruff check .
+python -m mypy
+python scripts/check_evidence.py
+python -m build
 ```
 
 Coverage includes validation, RF reference calculations, frozen-orbit contacts, pause/resume,
 contact-plan construction, three routing policies, backhaul-sensitive selection, capacity
 contention, deterministic tie-breaking, failure reasons, CLI JSON, both benchmarks, and Streamlit
-AppTest. `.github/workflows/ci.yml` runs install, Ruff, and pytest on Python 3.11 and 3.12 with
-`contents: read`. The published `main` workflow is verified green in
-[GitHub Actions](https://github.com/dev-yoshitani/medlink-leo/actions/workflows/ci.yml).
+AppTest, independent Pyorbital propagation/contact comparisons, and matched-analysis integrity.
+`.github/workflows/ci.yml` runs dependency checks, Ruff, mypy, pytest, canonical evidence
+reproduction and installed-wheel checks on Python 3.11/3.12, plus a Docker HTTP/AppTest job,
+with `contents: read`. Check the actual commit's
+[GitHub Actions result](https://github.com/dev-yoshitani/medlink-leo/actions/workflows/ci.yml)
+and [status](docs/status.md); local tests and workflow definitions alone are not remote CI evidence.
 
 ## Repository structure
 

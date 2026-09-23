@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from medlink._validation import required_field
 from medlink.link import RFLinkTemplate
 from medlink.models import LinkConfig, MedicalData, Priority, ensure_finite
 from medlink.orbit import FrozenTLE, GroundStation, load_bundled_tle
@@ -169,12 +170,12 @@ def _items(value: Any) -> list[dict[str, Any]]:
 def _parse_medical_data(root: dict[str, Any]) -> tuple[MedicalData, ...]:
     return tuple(
         MedicalData(
-            id=item.get("id"),
-            data_type=item.get("data_type"),
-            size_bytes=item.get("size_bytes"),
-            priority=Priority.parse(item.get("priority")),
-            created_at_s=item.get("created_at_s"),
-            deadline_s=item.get("deadline_s"),
+            id=required_field(item, "id"),
+            data_type=required_field(item, "data_type"),
+            size_bytes=required_field(item, "size_bytes"),
+            priority=Priority.parse(required_field(item, "priority")),
+            created_at_s=required_field(item, "created_at_s"),
+            deadline_s=required_field(item, "deadline_s"),
         )
         for item in _items(root.get("medical_data"))
     )
@@ -185,10 +186,10 @@ def _parse_tle(value: Any) -> FrozenTLE:
         return load_bundled_tle()
     payload = _mapping(value, "orbit.tle")
     return FrozenTLE(
-        satellite_name=payload.get("satellite_name"),
-        line1=payload.get("line1"),
-        line2=payload.get("line2"),
-        epoch_utc=parse_utc(payload.get("epoch_utc"), "orbit.tle.epoch_utc"),
+        satellite_name=required_field(payload, "satellite_name"),
+        line1=required_field(payload, "line1"),
+        line2=required_field(payload, "line2"),
+        epoch_utc=parse_utc(required_field(payload, "epoch_utc"), "orbit.tle.epoch_utc"),
         source_url=payload.get("source_url", "user-provided"),
         source_note=payload.get("source_note", "User-provided TLE"),
     )
@@ -197,25 +198,25 @@ def _parse_tle(value: Any) -> FrozenTLE:
 def _parse_ground_station(value: Any, name: str) -> GroundStation:
     payload = _mapping(value, name)
     return GroundStation(
-        name=payload.get("name"),
-        latitude_deg=payload.get("latitude_deg"),
-        longitude_deg=payload.get("longitude_deg"),
-        altitude_m=payload.get("altitude_m"),
-        minimum_elevation_deg=payload.get("minimum_elevation_deg"),
+        name=required_field(payload, "name"),
+        latitude_deg=required_field(payload, "latitude_deg"),
+        longitude_deg=required_field(payload, "longitude_deg"),
+        altitude_m=required_field(payload, "altitude_m"),
+        minimum_elevation_deg=required_field(payload, "minimum_elevation_deg"),
     )
 
 
 def _parse_rf_link(value: Any, name: str) -> RFLinkTemplate:
     payload = _mapping(value, name)
     return RFLinkTemplate(
-        frequency_hz=payload.get("frequency_hz"),
-        tx_power_dbm=payload.get("tx_power_dbm"),
-        tx_antenna_gain_dbi=payload.get("tx_antenna_gain_dbi"),
-        rx_antenna_gain_dbi=payload.get("rx_antenna_gain_dbi"),
-        system_losses_db=payload.get("system_losses_db"),
-        noise_temperature_k=payload.get("noise_temperature_k"),
-        channel_bandwidth_hz=payload.get("channel_bandwidth_hz"),
-        implementation_efficiency=payload.get("implementation_efficiency"),
+        frequency_hz=required_field(payload, "frequency_hz"),
+        tx_power_dbm=required_field(payload, "tx_power_dbm"),
+        tx_antenna_gain_dbi=required_field(payload, "tx_antenna_gain_dbi"),
+        rx_antenna_gain_dbi=required_field(payload, "rx_antenna_gain_dbi"),
+        system_losses_db=required_field(payload, "system_losses_db"),
+        noise_temperature_k=required_field(payload, "noise_temperature_k"),
+        channel_bandwidth_hz=required_field(payload, "channel_bandwidth_hz"),
+        implementation_efficiency=required_field(payload, "implementation_efficiency"),
         required_snr_db=payload.get("required_snr_db"),
     )
 
@@ -223,10 +224,10 @@ def _parse_rf_link(value: Any, name: str) -> RFLinkTemplate:
 def _load_fixed(root: dict[str, Any]) -> FixedScenario:
     link_data = _mapping(root.get("link"), "link")
     return FixedScenario(
-        schema_version=root.get("schema_version"),
-        scenario_id=root.get("scenario_id"),
+        schema_version=required_field(root, "schema_version"),
+        scenario_id=required_field(root, "scenario_id"),
         description=root.get("description", ""),
-        link=LinkConfig(bandwidth_bps=link_data.get("bandwidth_bps")),
+        link=LinkConfig(bandwidth_bps=required_field(link_data, "bandwidth_bps")),
         medical_data=_parse_medical_data(root),
     )
 
@@ -235,12 +236,12 @@ def _load_intermittent(root: dict[str, Any]) -> IntermittentScenario:
     simulation = _mapping(root.get("simulation"), "simulation")
     orbit = _mapping(root.get("orbit"), "orbit")
     return IntermittentScenario(
-        schema_version=root.get("schema_version"),
-        scenario_id=root.get("scenario_id"),
+        schema_version=required_field(root, "schema_version"),
+        scenario_id=required_field(root, "scenario_id"),
         description=root.get("description", ""),
-        start_utc=parse_utc(simulation.get("start_utc"), "simulation.start_utc"),
-        end_utc=parse_utc(simulation.get("end_utc"), "simulation.end_utc"),
-        time_step_s=simulation.get("time_step_s"),
+        start_utc=parse_utc(required_field(simulation, "start_utc"), "simulation.start_utc"),
+        end_utc=parse_utc(required_field(simulation, "end_utc"), "simulation.end_utc"),
+        time_step_s=required_field(simulation, "time_step_s"),
         tle=_parse_tle(orbit.get("tle")),
         ground_station=_parse_ground_station(
             orbit.get("ground_station"), "orbit.ground_station"
@@ -268,23 +269,23 @@ def _load_routing(root: dict[str, Any]) -> RoutingScenario:
         link_payload = {**base_link, **overrides}
         stations.append(
             RoutingGroundStation(
-                id=payload.get("id"),
+                id=required_field(payload, "id"),
                 ground_station=_parse_ground_station(payload, name),
                 rf_link=_parse_rf_link(link_payload, f"{name}.link"),
-                backhaul_delay_s=payload.get("backhaul_delay_s"),
+                backhaul_delay_s=required_field(payload, "backhaul_delay_s"),
             )
         )
     return RoutingScenario(
-        schema_version=root.get("schema_version"),
-        scenario_id=root.get("scenario_id"),
+        schema_version=required_field(root, "schema_version"),
+        scenario_id=required_field(root, "scenario_id"),
         description=root.get("description", ""),
-        start_utc=parse_utc(simulation.get("start_utc"), "simulation.start_utc"),
-        end_utc=parse_utc(simulation.get("end_utc"), "simulation.end_utc"),
-        time_step_s=simulation.get("time_step_s"),
+        start_utc=parse_utc(required_field(simulation, "start_utc"), "simulation.start_utc"),
+        end_utc=parse_utc(required_field(simulation, "end_utc"), "simulation.end_utc"),
+        time_step_s=required_field(simulation, "time_step_s"),
         tle=_parse_tle(orbit.get("tle")),
-        remote_clinic_id=network.get("remote_clinic_id"),
-        satellite_id=network.get("satellite_id"),
-        hospital_gateway_id=network.get("hospital_gateway_id"),
+        remote_clinic_id=required_field(network, "remote_clinic_id"),
+        satellite_id=required_field(network, "satellite_id"),
+        hospital_gateway_id=required_field(network, "hospital_gateway_id"),
         scheduling_strategy=network.get("scheduling_strategy", "edf"),
         ground_stations=tuple(stations),
         medical_data=_parse_medical_data(root),

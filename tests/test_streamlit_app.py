@@ -43,6 +43,17 @@ def test_default_streamlit_routing_demo_runs_offline() -> None:
         "Selected",
     ]
 
+    app.selectbox(key="routing_strategy").set_value("deadline-aware").run(timeout=30)
+    assert not app.exception
+    assert any("Route decisions — deadline-aware" == header.value for header in app.subheader)
+    item_ids = app.selectbox(key="routing_item").options
+    app.selectbox(key="routing_item").set_value(item_ids[-1]).run(timeout=30)
+    assert not app.exception
+    assert any("Next Contact" in frame.value.columns for frame in app.dataframe)
+    app.radio(key="demo_mode").set_value("Existing Simulation").run(timeout=30)
+    app.radio(key="demo_mode").set_value("Contact-Plan Routing").run(timeout=30)
+    assert any("Routing strategy" in frame.value.columns for frame in app.dataframe)
+
 
 def test_existing_simulation_mode_remains_available() -> None:
     app_path = Path(__file__).resolve().parents[1] / "app" / "streamlit_app.py"
@@ -59,3 +70,6 @@ def test_existing_simulation_mode_remains_available() -> None:
     )
     assert comparison["Scheduler"].tolist() == ["FIFO", "PRIORITY", "EDF"]
     assert comparison["Delivered"].tolist() == [3, 2, 3]
+    app.selectbox(key="scheduler_strategy").set_value("edf").run(timeout=30)
+    assert not app.exception
+    assert any("Queue and delivery — EDF" == header.value for header in app.subheader)

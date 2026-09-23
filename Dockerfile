@@ -16,6 +16,9 @@ COPY .streamlit ./.streamlit
 
 RUN python -m pip install .
 
+RUN useradd --create-home --uid 10001 demo
+USER demo
+
 EXPOSE 8501
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \

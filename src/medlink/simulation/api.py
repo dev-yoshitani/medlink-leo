@@ -26,6 +26,7 @@ def simulate(scenario: Scenario, strategy: Strategy | str) -> SimulationReport:
 
 
 def compare_strategies(scenario: Scenario) -> ComparisonReport:
+    reports: tuple[FixedSimulationReport | IntermittentSimulationReport, ...]
     if isinstance(scenario, FixedScenario):
         reports = tuple(simulate_fixed(scenario, strategy) for strategy in SCHEDULER_ORDER)
     else:

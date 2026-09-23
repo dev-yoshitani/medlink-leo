@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -258,24 +259,34 @@ def _render_routing_demo() -> None:
         key="compare_routing",
     )
 
-    if not run_requested:
+    if run_requested:
+        with st.spinner("Propagating the frozen orbit and integrating RF contact capacity…"):
+            st.session_state.routing_comparison = compare_routing_strategies(scenario)
+    if "routing_comparison" not in st.session_state:
         st.info(
             "Run the bundled offline scenario to compare all three policies on the same "
             "deterministic contact plan."
         )
         return
 
-    with st.spinner("Propagating the frozen orbit and integrating RF contact capacity…"):
-        comparison = compare_routing_strategies(scenario)
-        report_by_strategy = {
-            report.strategy.value: report for report in comparison.reports
-        }
-        selected_report = report_by_strategy[selected_strategy]
+    comparison = st.session_state.routing_comparison
+    report_by_strategy = {report.strategy.value: report for report in comparison.reports}
+    selected_report = report_by_strategy[selected_strategy]
 
     st.success(
         "Routing comparison complete. Every policy used the same workload and contact plan."
     )
     st.subheader("Strategy comparison")
+    st.caption(
+        "Latency includes delivered items only. Compare delivery ratio and deadlines first: "
+        "rejecting late items can lower the displayed mean without speeding up any item."
+    )
+    st.download_button(
+        "Download reproducible routing results (JSON)",
+        json.dumps(comparison.to_dict(), indent=2, allow_nan=False),
+        file_name="medlink-routing-comparison.json",
+        mime="application/json",
+    )
     comparison_frame = _routing_comparison_frame(comparison)
     st.dataframe(
         comparison_frame,
@@ -404,16 +415,17 @@ def _render_existing_simulation() -> None:
         key="scheduler_strategy",
     )
     run_requested = st.button("Run Simulation", type="primary", key="run_simulation")
-    if not run_requested:
+    if run_requested:
+        with st.spinner("Propagating the frozen orbit and simulating all schedulers…"):
+            st.session_state.simulation_comparison = compare_strategies(scenario)
+            st.session_state.simulation_trace = _trace_frame(scenario)
+    if "simulation_comparison" not in st.session_state:
         return
 
-    with st.spinner("Propagating the frozen orbit and simulating all schedulers…"):
-        comparison = compare_strategies(scenario)
-        report_by_strategy = {
-            report.strategy.value: report for report in comparison.reports
-        }
-        selected_report = report_by_strategy[selected_strategy]
-        trace_frame = _trace_frame(scenario)
+    comparison = st.session_state.simulation_comparison
+    report_by_strategy = {report.strategy.value: report for report in comparison.reports}
+    selected_report = report_by_strategy[selected_strategy]
+    trace_frame = st.session_state.simulation_trace
 
     st.success("Simulation complete. All schedulers used the same workload and link trace.")
     st.subheader("Scheduler comparison")
@@ -474,6 +486,11 @@ st.markdown(
 st.title("MedLink-LEO")
 st.caption("Reliable medical-data delivery over constrained LEO satellite links.")
 st.warning(SAFETY_NOTICE)
+st.markdown(
+    "**Explore in three steps:** compare the policies, switch the detailed strategy, "
+    "then select an item to inspect candidate contacts and the decision reason. "
+    "[Source and engineering evidence](https://github.com/dev-yoshitani/medlink-leo)"
+)
 
 mode = st.radio(
     "Mode",

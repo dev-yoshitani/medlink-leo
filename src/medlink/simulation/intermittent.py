@@ -179,11 +179,13 @@ def _results_and_metrics(
         state = states[item.id]
         delivered = state.completed_at_s is not None
         deferred = not delivered and item.due_at_s > scenario.horizon_s
-        deadline_met = delivered and state.completed_at_s <= item.due_at_s
+        deadline_met = state.completed_at_s is not None and state.completed_at_s <= item.due_at_s
         deadline_missed = (delivered and not deadline_met) or (
             not delivered and item.due_at_s <= scenario.horizon_s
         )
-        latency = state.completed_at_s - item.created_at_s if delivered else None
+        latency = (
+            state.completed_at_s - item.created_at_s if state.completed_at_s is not None else None
+        )
         results.append(
             IntermittentTransmissionResult(
                 data_id=item.id,

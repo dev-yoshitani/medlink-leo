@@ -258,6 +258,7 @@ def run_routing_benchmark(
     efficiency_factors = _positive_factors(config, "rf_efficiency_factors")
     station_ids = tuple(sorted(station.id for station in loaded.ground_stations))
     records: list[dict[str, Any]] = []
+    item_records: list[dict[str, Any]] = []
 
     for elevation_deg in elevation_masks:
         for efficiency_factor in efficiency_factors:
@@ -320,9 +321,26 @@ def run_routing_benchmark(
                             for reason, count in metrics.failure_counts.items():
                                 row[f"failure_{reason.lower()}_count"] = count
                             records.append(row)
+                            for result in report.results:
+                                item_records.append({
+                                    key: row[key] for key in (
+                                        "config_id", "routing_strategy", "scheduler", "time_step_s",
+                                        "offered_load_factor", "deadline_factor", "backhaul_factor",
+                                        "minimum_elevation_deg", "rf_efficiency_factor",
+                                    )
+                                } | {
+                                    "item_id": result.medical_data_id,
+                                    "delivered": result.delivered,
+                                    "deadline_met": result.delivered and result.deadline_feasible,
+                                    "latency_s": result.latency_s,
+                                    "failure_reason": (
+                                        result.failure_reason.value if result.failure_reason else ""
+                                    ),
+                                })
 
     raw = pd.DataFrame.from_records(records)
     raw.to_csv(output / "raw_results.csv", index=False, lineterminator="\n")
+    pd.DataFrame(item_records).to_csv(output / "item_results.csv", index=False, lineterminator="\n")
     summary_rows = _summary_rows(raw, station_ids)
     summary = pd.DataFrame.from_records(summary_rows)
     summary.to_csv(output / "summary.csv", index=False, lineterminator="\n")
