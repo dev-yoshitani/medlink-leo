@@ -51,6 +51,16 @@ docker run --rm -p 8501:8501 medlink-leo:1.1.0
 The image launches Streamlit on `0.0.0.0:8501` and exposes `/_stcore/health`. Docker is optional
 for Community Cloud and is not a default-demo dependency.
 
+The container runs as an unprivileged `demo` user. The `Docker smoke` CI job builds it,
+checks HTTP readiness within 60 seconds, and actually executes the routing app and strategy
+switching with AppTest. A startup connection reset is retried within that deadline; invalid
+health content, application exceptions or missing results fail the job. See [verified status](status.md).
+
+After deployment, record the real app URL and source branch/commit. Test changing both the
+routing strategy and selected item without rerunning, download the JSON, and switch to
+Existing Simulation. Use only the bundled synthetic data and leave Secrets empty. When
+switching an app from a feature branch to main, repeat these checks against the merged commit.
+
 ## Known host constraints
 
 Community Cloud executes from the repository root, so all runtime paths are derived from the app

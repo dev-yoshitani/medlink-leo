@@ -24,7 +24,7 @@
 
 Environment: Windows, Python 3.12.14. This records actual checks, not future expectations.
 
-- Full pytest suite: 98 passed.
+- Full pytest suite: 103 passed.
 - mypy: 32 source files passed; Ruff and `pip check`: passed.
 - Independent comparison passed the predeclared tolerances; maximum rise/set discrepancy
   0.232256 s. Reference/library versions and all errors are in the committed JSON.
@@ -38,9 +38,14 @@ Environment: Windows, Python 3.12.14. This records actual checks, not future exp
 
 ## External verification and remaining work
 
-- Remote CI for this change must be read from its PR/check runs; the older release's green CI
-  is not evidence for new code.
-- Docker CLI is unavailable on the local host; container execution is assigned to the CI job.
+- [PR #4](https://github.com/dev-yoshitani/medlink-leo/pull/4) links the implementation to
+  engineering Issues #1, #2 and #3.
+- [CI checkpoint bceca42](https://github.com/dev-yoshitani/medlink-leo/actions/runs/35802093909)
+  passed Python 3.11/3.12 (tests, typing, canonical reproduction and packaging) and Docker smoke.
+  Read the PR's latest checks for later commits; the older release's CI is not used as evidence.
+- Docker CLI is unavailable locally. The remote job built the non-root container and passed
+  HTTP health/root plus real Streamlit AppTest. The first run exposed a startup connection-reset
+  race; bounded retry was corrected with regression tests while retaining all content assertions.
 - Streamlit Community Cloud sign-in is required. No public demo URL is claimed until an actual
   deployment and browser check succeed. [Deployment procedure](deployment.md).
 - Main protection was applied with the maintainer's explicit approval: PR required, current-base

@@ -42,6 +42,8 @@ def validate_orbit(scenario_path: str | Path) -> dict:
     # Pyorbital accepts UTC numpy datetimes without timezone; conversion is explicit.
     utc = np.array([np.datetime64(t.replace(tzinfo=None)) for t in moments])
     ref_position, ref_velocity = reference.get_position(utc, normalize=False)
+    if not np.isfinite(ref_position).all() or not np.isfinite(ref_velocity).all():
+        raise ValueError("reference state contains non-finite values")
     position_errors, velocity_errors = [], []
     for i, moment in enumerate(moments):
         jd, fraction = jday(
@@ -55,6 +57,8 @@ def validate_orbit(scenario_path: str | Path) -> dict:
         error, position, velocity = production.sgp4(jd, fraction)
         if error:
             raise ValueError(f"SGP4 propagation failed with code {error}")
+        if not np.isfinite(position).all() or not np.isfinite(velocity).all():
+            raise ValueError("production state contains non-finite values")
         position_errors.append(float(np.linalg.norm(position - ref_position[:, i]) * 1000))
         velocity_errors.append(float(np.linalg.norm(velocity - ref_velocity[:, i]) * 1000))
     maxima = {
@@ -75,7 +79,11 @@ def validate_orbit(scenario_path: str | Path) -> dict:
             np.linalg.norm(ref_position - np.array(np.broadcast_arrays(*observer)), axis=0) * 1000
         )
         samples = propagate_orbit_many(tle, ground, moments)
+        if not all(np.isfinite(value).all() for value in (azimuth, elevation, ranges)):
+            raise ValueError("reference geometry contains non-finite values")
         for i, sample in enumerate(samples):
+            if not np.isfinite([sample.elevation_deg, sample.azimuth_deg, sample.range_m]).all():
+                raise ValueError("production geometry contains non-finite values")
             maxima["elevation_deg"] = max(
                 maxima["elevation_deg"], abs(sample.elevation_deg - float(elevation[i]))
             )

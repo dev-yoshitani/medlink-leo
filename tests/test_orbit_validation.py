@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import socket
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -30,3 +31,15 @@ def test_validation_command_fails_closed_and_writes_failed_evidence(monkeypatch,
     with pytest.raises(SystemExit, match="exceeded"):
         orbit_validation.main()
     assert '"passed": false' in output.read_text()
+
+
+def test_nonfinite_geometry_cannot_be_hidden_by_maximum(monkeypatch) -> None:
+    propagate = orbit_validation.propagate_orbit_many
+
+    def corrupted(*args):
+        samples = propagate(*args)
+        return (replace(samples[0], elevation_deg=float("nan")), *samples[1:])
+
+    monkeypatch.setattr(orbit_validation, "propagate_orbit_many", corrupted)
+    with pytest.raises(ValueError, match="non-finite"):
+        orbit_validation.validate_orbit(ROOT / "examples/contact_plan_medical_routing.json")

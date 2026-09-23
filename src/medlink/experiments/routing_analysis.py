@@ -34,7 +34,7 @@ def analyze(raw: pd.DataFrame, items: pd.DataFrame) -> dict:
         if not groups.map(lambda values: values == set(POLICIES)).all():
             raise ValueError("each condition/item requires all three policies")
     for column in ("delivered", "deadline_met"):
-        if items[column].isna().any() or not items[column].isin([True, False]).all():
+        if items[column].isna().any() or not pd.api.types.is_bool_dtype(items[column]):
             raise ValueError("delivery flags must be boolean")
     if (items["deadline_met"] & ~items["delivered"]).any():
         raise ValueError("undelivered item cannot meet a deadline")

@@ -57,7 +57,7 @@ def test_matched_items_separate_censoring_from_speed() -> None:
     assert len(result["paired_factors"]) == 15
 
 
-@pytest.mark.parametrize("fault", ["duplicate", "missing", "counts", "rate", "latency"])
+@pytest.mark.parametrize("fault", ["duplicate", "missing", "counts", "rate", "latency", "flags"])
 def test_corrupt_or_unmatched_evidence_is_rejected(fault) -> None:
     raw, items = evidence()
     if fault == "duplicate":
@@ -68,6 +68,8 @@ def test_corrupt_or_unmatched_evidence_is_rejected(fault) -> None:
         raw.loc[0, "delivered_count"] = 1
     elif fault == "rate":
         raw.loc[0, "delivery_ratio"] = 0
+    elif fault == "flags":
+        items["delivered"] = items["delivered"].astype(int)
     else:
         items.loc[0, "latency_s"] = float("nan")
     with pytest.raises(ValueError):
