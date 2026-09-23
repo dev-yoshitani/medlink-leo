@@ -1,8 +1,8 @@
 # Deployment
 
-The Streamlit application is prepared for Streamlit Community Cloud and local/container use from
-the public repository at `https://github.com/dev-yoshitani/medlink-leo`. No public demo URL is
-claimed because Streamlit deployment still requires interactive service authentication.
+The [public Streamlit demo](https://medlink-leo.streamlit.app/) runs on Streamlit Community Cloud
+from `dev-yoshitani/medlink-leo`, branch `main`, entry point `app/streamlit_app.py`. At deployment
+on 2026-09-24 JST, `main` was `da5930df6a8bbf1f2d955c5884d61ebdac2f0b9d`.
 
 ## Compatibility summary
 
@@ -37,7 +37,14 @@ Using the public `dev-yoshitani/medlink-leo` repository:
 5. Deploy, then verify the safety notice, Contact-Plan Routing comparison, Ground Station table,
    Why this route? explanation, and Existing Simulation mode.
 
-Do not add a Live Demo link until the deployed URL has been opened and those checks pass.
+The public URL was opened after deployment. The browser showed the synthetic-data/non-clinical
+notice, the three-strategy comparison, contact and ground-station candidates, and a Why this
+route? explanation. Switching to Deadline-Aware and selecting a failed item kept the comparison
+visible and showed `INSUFFICIENT_CAPACITY`. Existing Simulation ran and displayed FIFO, Priority,
+and EDF results. The routing JSON button triggered a browser download; downloaded bytes were not
+separately inspected. Cloud logs showed Python 3.12.14 and installation from root
+`requirements.txt`. No Secrets were configured. An anonymous HTTP request retaining cookies
+through Streamlit's redirect returned 200 at the same app URL without a login page.
 
 ## Container execution
 
@@ -56,14 +63,13 @@ checks HTTP readiness within 60 seconds, and actually executes the routing app a
 switching with AppTest. A startup connection reset is retried within that deadline; invalid
 health content, application exceptions or missing results fail the job. See [verified status](status.md).
 
-After deployment, record the real app URL and source branch/commit. Test changing both the
-routing strategy and selected item without rerunning, download the JSON, and switch to
-Existing Simulation. Use only the bundled synthetic data and leave Secrets empty. When
-switching an app from a feature branch to main, repeat these checks against the merged commit.
+For later deployments, record the actual source branch/commit and repeat the browser checks,
+including changing the routing strategy and selected item without rerunning, downloading the JSON,
+and switching to Existing Simulation. Use only the bundled synthetic data and leave Secrets empty.
 
 ## Known host constraints
 
 Community Cloud executes from the repository root, so all runtime paths are derived from the app
 file rather than the current working directory. Ephemeral storage is sufficient because the app
-reads bundled fixtures and writes no required persistent state. Public deployment still depends
-on interactive Streamlit service authentication and app creation.
+reads bundled fixtures and writes no required persistent state. Maintaining the public deployment
+requires access to its Streamlit Cloud account.

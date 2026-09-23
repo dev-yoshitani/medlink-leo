@@ -27,6 +27,9 @@ Published release: [v1.1.0](https://github.com/dev-yoshitani/medlink-leo/release
 Portfolio hardening is an **unreleased change set** on the same model version; historical
 benchmark artifacts keep their original version labels. See [interview walkthrough](docs/portfolio-review.md).
 
+**Live demo:** [medlink-leo.streamlit.app](https://medlink-leo.streamlit.app/) (bundled synthetic
+data and frozen historical TLE; no login or API key needed to use the demo).
+
 ## 日本語での概要
 
 低軌道衛星との通信が断続する条件下で、模擬医療データを期限内に届ける配送手法を比較・評価する工学シミュレーターです。
@@ -126,9 +129,9 @@ The **Existing Simulation** mode preserves the v1.0 scheduler and pause/resume d
 Results persist while switching strategies and inspecting items; routing JSON can be downloaded.
 The UI explicitly labels delivered-only latency to avoid confusing rejection with speed.
 
-The app is prepared for Streamlit Community Cloud through root `requirements.txt` and
-`app/streamlit_app.py`; no environment variables are required. No public demo URL is claimed.
-See [deployment.md](docs/deployment.md).
+The [public Streamlit demo](https://medlink-leo.streamlit.app/) runs from `main` with root
+`requirements.txt` and `app/streamlit_app.py`; no environment variables are required. See
+[deployment.md](docs/deployment.md) for the deployed configuration and browser checks.
 
 ## What is implemented
 
