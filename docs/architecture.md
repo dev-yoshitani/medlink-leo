@@ -77,4 +77,5 @@ routing policies. Schedulers remain reusable and are not embedded in the routing
 
 `app/streamlit_app.py` contains no orbital, RF, scheduling, or routing equations. It formats
 `RoutingComparisonReport` and existing simulation reports, so the Web path cannot silently become
-a second implementation.
+a second implementation. `app/mission_scene.py` composes the six bundled SVG illustrations into
+a conceptual network diagram and highlights only the route selected by the report.

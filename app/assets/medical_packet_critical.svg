@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 120" role="img" aria-label="Critical synthetic data packet illustration">
+  <rect x="12" y="18" width="136" height="84" rx="10" fill="#f4e7df" stroke="#263c50" stroke-width="5"/>
+  <path d="M12 44h136" stroke="#263c50" stroke-width="5"/>
+  <path d="M22 31h54" stroke="#d75859" stroke-width="8" stroke-linecap="round"/>
+  <path d="M31 74h20l8-15 10 29 9-14h31" fill="none" stroke="#d75859" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/>
+  <circle cx="126" cy="73" r="8" fill="#d75859"/>
+</svg>

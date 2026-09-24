@@ -122,16 +122,21 @@ python -m pip install -e ".[dev]"
 streamlit run app/streamlit_app.py
 ```
 
-The first screen opens **Contact-Plan Routing** with the bundled three-station scenario and frozen
-TLE. One **Compare Routing Strategies** action shows route metrics, contact capacity, station
-backhaul, estimated arrivals, deadline margins, explicit outcomes, and Why this route? evidence.
-The **Existing Simulation** mode preserves the v1.0 scheduler and pause/resume demonstration.
-Results persist while switching strategies and inspecting items; routing JSON can be downloaded.
-The UI explicitly labels delivered-only latency to avoid confusing rejection with speed.
+In this branch, the local demo opens **Routing Mission** with a bundled three-station scenario and
+frozen TLE.
+**Start Mission** runs all three routing policies on one deterministic contact plan. The resulting
+2D scene highlights the selected route for the inspected payload; the payload manifest, candidate
+cards, contact timeline, and mission debrief expose the corresponding results. The scene is a
+conceptual diagram, not live tracking, and the clinic uplink remains abstracted. Original SVG
+illustrations live in `app/assets/`. **Engineering data** retains the full tables and JSON export.
+**Link Simulator** preserves the v1.0 scheduler and pause/resume demonstration. Results persist
+while switching strategies and inspecting items. Mean latency is explicitly limited to delivered
+items so rejection is not confused with faster shared deliveries.
 
 The [public Streamlit demo](https://medlink-leo.streamlit.app/) runs from `main` with root
 `requirements.txt` and `app/streamlit_app.py`; no environment variables are required. See
-[deployment.md](docs/deployment.md) for the deployed configuration and browser checks.
+[deployment.md](docs/deployment.md) for the deployed configuration and browser checks. The public
+demo may still show the earlier interface until this branch is merged and deployed.
 
 ## What is implemented
 
