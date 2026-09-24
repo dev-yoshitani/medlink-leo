@@ -10,6 +10,17 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 from mission_scene import build_scene
+from ui_labels import (
+    DATA_LABELS,
+    FAILURE_LABELS,
+    PRIORITY_LABELS,
+    ROUTING_LABELS,
+    SCHEDULER_LABELS,
+    outcome_label,
+    route_explanation,
+    station_label,
+    station_name_label,
+)
 
 from medlink.orbit import utc_iso
 from medlink.routing import (
@@ -25,9 +36,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SIMULATION_SCENARIO = PROJECT_ROOT / "examples" / "end_to_end_scenario.json"
 ROUTING_SCENARIO = PROJECT_ROOT / "examples" / "contact_plan_medical_routing.json"
 SAFETY_NOTICE = (
-    "MedLink-LEO uses synthetic medical data only. It is an engineering simulation "
-    "project and is not intended for diagnosis, treatment, clinical decision-making, "
-    "or real-world medical operations."
+    "この画面は架空の医療データを使う工学シミュレーションです。診断・治療・臨床判断や、"
+    "実際の医療活動には使えません。"
 )
 
 
@@ -50,11 +60,12 @@ def _workload_frame(scenario: IntermittentScenario | RoutingScenario) -> pd.Data
         [
             {
                 "ID": item.id,
-                "Synthetic data class": item.data_type,
-                "Size (MB)": item.size_bytes / 1_000_000,
-                "Priority class": item.priority.name,
-                "Created (s)": item.created_at_s,
-                "Absolute deadline (s)": item.due_at_s,
+                "データの種類": DATA_LABELS.get(item.data_type, item.data_type),
+                "種別コード": item.data_type,
+                "容量（MB）": item.size_bytes / 1_000_000,
+                "優先度": PRIORITY_LABELS[item.priority.name],
+                "生成時刻（秒）": item.created_at_s,
+                "期限（秒）": item.due_at_s,
             }
             for item in scenario.medical_data
         ]
@@ -65,18 +76,18 @@ def _scheduler_comparison_frame(comparison: Any) -> pd.DataFrame:
     return pd.DataFrame(
         [
             {
-                "Scheduler": report.strategy.value.upper(),
-                "Delivered": report.metrics.delivered_count,
-                "Undelivered": report.metrics.undelivered_count,
-                "Deferred": report.metrics.deferred_count,
-                "Deadline satisfaction (%)": report.metrics.deadline_satisfaction_rate * 100,
-                "Critical-class satisfaction (%)": (
+                "スケジューラ": SCHEDULER_LABELS[report.strategy.value],
+                "到着": report.metrics.delivered_count,
+                "未到着": report.metrics.undelivered_count,
+                "保留": report.metrics.deferred_count,
+                "期限内到着率（%）": report.metrics.deadline_satisfaction_rate * 100,
+                "最優先クラスの期限内到着率（%）": (
                     report.metrics.critical_deadline_satisfaction_rate * 100
                     if report.metrics.critical_deadline_satisfaction_rate is not None
                     else None
                 ),
-                "Average latency (s)": report.metrics.average_latency_s,
-                "Link utilization (%)": report.metrics.link_utilization * 100,
+                "平均遅延（秒）": report.metrics.average_latency_s,
+                "通信利用率（%）": report.metrics.link_utilization * 100,
             }
             for report in comparison.reports
         ]
@@ -95,18 +106,22 @@ def _delivery_frame(report: Any) -> pd.DataFrame:
     ):
         rows.append(
             {
-                "Order": result.selection_order,
+                "順番": result.selection_order,
                 "ID": result.data_id,
-                "Priority": result.priority.name,
-                "Status": result.status,
-                "Deferred": result.deferred,
-                "Deadline met": result.deadline_met,
-                "Started (s)": result.first_started_at_s,
-                "Completed (s)": result.completed_at_s,
-                "Latency (s)": result.latency_s,
-                "Contact pauses": result.contact_pause_count,
-                "Transferred (Mbit)": result.transferred_bits / 1_000_000,
-                "Remaining (Mbit)": result.remaining_bits / 1_000_000,
+                "優先度": PRIORITY_LABELS[result.priority.name],
+                "状態": {
+                    "delivered": "到着",
+                    "undelivered": "未到着",
+                    "deferred": "保留",
+                }.get(result.status, result.status),
+                "保留": "あり" if result.deferred else "なし",
+                "期限内": "はい" if result.deadline_met else "いいえ",
+                "送信開始（秒）": result.first_started_at_s,
+                "送信完了（秒）": result.completed_at_s,
+                "遅延（秒）": result.latency_s,
+                "接触中断回数": result.contact_pause_count,
+                "送信済み（Mbit）": result.transferred_bits / 1_000_000,
+                "残量（Mbit）": result.remaining_bits / 1_000_000,
             }
         )
     return pd.DataFrame(rows)
@@ -116,11 +131,11 @@ def _simulation_contact_frame(report: Any) -> pd.DataFrame:
     return pd.DataFrame(
         [
             {
-                "Start (UTC)": utc_iso(window.start_utc),
-                "End (UTC)": utc_iso(window.end_utc),
-                "Duration (s)": window.duration_s,
-                "Maximum elevation (deg)": window.maximum_elevation_deg,
-                "Minimum range (km)": window.minimum_range_m / 1_000,
+                "開始（UTC）": utc_iso(window.start_utc),
+                "終了（UTC）": utc_iso(window.end_utc),
+                "長さ（秒）": window.duration_s,
+                "最大仰角（度）": window.maximum_elevation_deg,
+                "最短距離（km）": window.minimum_range_m / 1_000,
             }
             for window in report.contact_windows
         ]
@@ -132,10 +147,10 @@ def _trace_frame(scenario: IntermittentScenario) -> pd.DataFrame:
     return pd.DataFrame(
         [
             {
-                "Elapsed time (min)": sample.time_s / 60,
-                "Elevation (deg)": sample.elevation_deg,
-                "Range (km)": sample.range_m / 1_000,
-                "Effective rate (Mbit/s)": sample.effective_rate_bps / 1_000_000,
+                "経過時間（分）": sample.time_s / 60,
+                "仰角（度）": sample.elevation_deg,
+                "距離（km）": sample.range_m / 1_000,
+                "実効速度（Mbit/s）": sample.effective_rate_bps / 1_000_000,
             }
             for sample in trace
         ]
@@ -146,20 +161,20 @@ def _routing_comparison_frame(comparison: RoutingComparisonReport) -> pd.DataFra
     return pd.DataFrame(
         [
             {
-                "Routing strategy": report.strategy.value,
-                "Delivered": report.metrics.delivered_count,
-                "Failed": report.metrics.failed_count,
-                "Deadline satisfaction (%)": report.metrics.deadline_satisfaction_rate * 100,
-                "Critical-class satisfaction (%)": (
+                "経路の選び方": ROUTING_LABELS[report.strategy.value],
+                "到着": report.metrics.delivered_count,
+                "未到着": report.metrics.failed_count,
+                "期限内到着率（%）": report.metrics.deadline_satisfaction_rate * 100,
+                "最優先クラスの期限内到着率（%）": (
                     report.metrics.critical_deadline_satisfaction_rate * 100
                     if report.metrics.critical_deadline_satisfaction_rate is not None
                     else None
                 ),
-                "Delivery ratio (%)": report.metrics.delivery_ratio * 100,
-                "Mean end-to-end latency (s)": (
+                "到着率（%）": report.metrics.delivery_ratio * 100,
+                "平均所要時間（秒）": (
                     report.metrics.average_end_to_end_latency_s
                 ),
-                "Contact utilization (%)": report.metrics.contact_utilization * 100,
+                "接触容量の使用率（%）": report.metrics.contact_utilization * 100,
             }
             for report in comparison.reports
         ]
@@ -173,17 +188,17 @@ def _routing_contact_frame(report: RoutingReport) -> pd.DataFrame:
     return pd.DataFrame(
         [
             {
-                "Contact": contact.contact_id,
-                "Ground Station": contact.ground_station_name,
-                "Start (s)": contact.start_s,
-                "End (s)": contact.end_s,
-                "Duration (s)": contact.duration_s,
-                "Capacity (Mbit)": contact.available_capacity_bits / 1_000_000,
-                "Propagation (ms)": contact.propagation_delay_s * 1_000,
-                "Backhaul (s)": station_by_id[
+                "接触ID": contact.contact_id,
+                "地上局": station_label(contact.ground_station_id),
+                "開始（秒）": contact.start_s,
+                "終了（秒）": contact.end_s,
+                "長さ（秒）": contact.duration_s,
+                "容量（Mbit）": contact.available_capacity_bits / 1_000_000,
+                "伝搬遅延（ms）": contact.propagation_delay_s * 1_000,
+                "地上回線遅延（秒）": station_by_id[
                     contact.ground_station_id
                 ].backhaul_delay_s,
-                "Maximum elevation (deg)": contact.maximum_elevation_deg,
+                "最大仰角（度）": contact.maximum_elevation_deg,
             }
             for contact in report.contact_plan.contacts
         ]
@@ -194,17 +209,17 @@ def _routing_result_frame(report: RoutingReport) -> pd.DataFrame:
     return pd.DataFrame(
         [
             {
-                "Order": result.scheduling_order,
-                "Medical item": result.medical_data_id,
-                "Priority": result.priority.name,
-                "Ground Station": result.selected_ground_station_name,
-                "Contact": result.selected_contact_id,
-                "RF departure (s)": result.estimated_departure_s,
-                "Hospital arrival (s)": result.estimated_arrival_s,
-                "Deadline (s)": result.deadline_at_s,
-                "Deadline margin (s)": result.deadline_margin_s,
-                "Deadline feasible": result.deadline_feasible,
-                "Outcome": "DELIVERED" if result.delivered else result.failure_reason.value,
+                "順番": result.scheduling_order,
+                "データID": result.medical_data_id,
+                "優先度": PRIORITY_LABELS[result.priority.name],
+                "地上局": station_label(result.selected_ground_station),
+                "接触ID": result.selected_contact_id,
+                "送信開始（秒）": result.estimated_departure_s,
+                "病院到着（秒）": result.estimated_arrival_s,
+                "期限（秒）": result.deadline_at_s,
+                "期限との差（秒）": result.deadline_margin_s,
+                "期限内": "はい" if result.deadline_feasible else "いいえ",
+                "結果": outcome_label(result),
             }
             for result in report.results
         ]
@@ -215,13 +230,13 @@ def _candidate_frame(result: Any) -> pd.DataFrame:
     return pd.DataFrame(
         [
             {
-                "Ground Station": candidate.ground_station_name,
-                "Next Contact": candidate.contact_start_s,
-                "Capacity (Mbit)": candidate.capacity_available_bits / 1_000_000,
-                "Backhaul (s)": candidate.backhaul_delay_s,
-                "Estimated Arrival (s)": candidate.estimated_arrival_s,
-                "Deadline Feasible": "Yes" if candidate.deadline_feasible else "No",
-                "Selected": "Yes" if candidate.selected else "No",
+                "地上局": station_label(candidate.ground_station_id),
+                "接触開始（秒）": candidate.contact_start_s,
+                "容量（Mbit）": candidate.capacity_available_bits / 1_000_000,
+                "地上回線遅延（秒）": candidate.backhaul_delay_s,
+                "病院到着見込み（秒）": candidate.estimated_arrival_s,
+                "期限内": "はい" if candidate.deadline_feasible else "いいえ",
+                "選択": "はい" if candidate.selected else "いいえ",
             }
             for candidate in result.candidates
         ]
@@ -237,45 +252,37 @@ def _mission_time(seconds: float | None) -> str:
     return f"{hours:02}:{minutes:02}:{seconds_part:02}"
 
 
-def _metric_card(label: str, value: str, detail: str = "") -> str:
-    return (
-        '<div class="mission-metric">'
-        f'<span class="mission-label">{escape(label)}</span>'
-        f'<strong>{escape(value)}</strong>'
-        f'<span class="mission-detail">{escape(detail)}</span></div>'
-    )
-
-
 def _render_payload_queue(report: RoutingReport, scenario: RoutingScenario) -> None:
     size_by_id = {item.id: item.size_bytes * 8 / 1_000_000 for item in scenario.medical_data}
     rows = []
     for result in report.results:
         priority = result.priority.name
-        status = "DELIVERED" if result.delivered else result.failure_reason.value
-        station = result.selected_ground_station_name or "No route"
-        data_label = result.data_type.replace("synthetic_", "").replace("_", " ").title()
+        status = outcome_label(result)
+        station = station_label(result.selected_ground_station, "経路なし")
+        data_label = DATA_LABELS.get(result.data_type, result.data_type)
         status_style = "done" if result.delivered else "failed"
         rows.append(
             '<div class="payload-row">'
             f'<span class="priority-dot {escape(priority.lower())}"></span>'
             f'<span class="payload-name"><b>{escape(result.medical_data_id)}</b>'
-            f'<small>{escape(data_label)}</small></span>'
+            f'<small>{escape(data_label)} · {PRIORITY_LABELS[priority]}</small></span>'
             f'<span class="payload-size">{size_by_id[result.medical_data_id]:.1f} Mbit</span>'
             f'<span class="payload-station">{escape(station)}</span>'
             f'<span class="payload-status {status_style}">{escape(status)}</span>'
             "</div>"
         )
     st.markdown(
-        '<div class="mission-panel"><div class="panel-heading">PAYLOAD MANIFEST</div>'
+        '<section class="mission-panel"><div class="panel-heading">荷物の行き先'
+        '<small>架空データ</small></div>'
         + ''.join(rows)
-        + '</div>',
+        + '</section>',
         unsafe_allow_html=True,
     )
 
 
 def _render_contact_timeline(report: RoutingReport, horizon_s: float) -> None:
     rows = []
-    stations = (("gs-seoul", "SEOUL"), ("gs-sapporo", "SAPPORO"), ("gs-tokyo", "TOKYO"))
+    stations = (("gs-seoul", "ソウル"), ("gs-sapporo", "札幌"), ("gs-tokyo", "東京"))
     for station_id, label in stations:
         windows = []
         for contact in report.contact_plan.contacts:
@@ -291,48 +298,48 @@ def _render_contact_timeline(report: RoutingReport, horizon_s: float) -> None:
         rows.append(
             f'<div class="timeline-row"><span>{label}</span>'
             f'<div class="timeline-track">{"".join(windows)}</div>'
-            f'<span>{len(windows)} contact{"s" if len(windows) != 1 else ""}</span></div>'
+            f'<span>{len(windows)}回</span></div>'
         )
     st.markdown(
-        '<div class="mission-panel"><div class="panel-heading">CONTACT TIMELINE'
-        '<span>HISTORICAL FIXTURE · ELAPSED TIME</span></div>'
+        '<section class="mission-panel"><div class="panel-heading">通信できる時間'
+        '<small>保存済みの軌道データ・経過時間</small></div>'
         + ''.join(rows)
-        + '<div class="timeline-axis"><span>00:00</span>'
-        + f'<span>{_mission_time(horizon_s)}</span></div></div>',
+        + '<div class="timeline-axis"><span>0分</span>'
+        + f'<span>{horizon_s / 60:.0f}分</span></div></section>',
         unsafe_allow_html=True,
     )
 
 
 def _render_route_decision(result: RouteResult) -> None:
-    outcome = "DELIVERED" if result.delivered else result.failure_reason.value
-    cards = []
+    rows = []
     for candidate in result.candidates:
         if candidate.selected:
-            state = "SELECTED"
+            state = "選択"
         elif candidate.failure_reason is not None:
-            state = candidate.failure_reason.value.replace("_", " ")
+            state = FAILURE_LABELS[candidate.failure_reason]
         elif not candidate.deadline_feasible:
-            state = "MISSES DEADLINE"
+            state = "期限超過"
         else:
-            state = "ALTERNATIVE"
+            state = "ほかの候補"
         arrival = _mission_time(candidate.estimated_arrival_s)
-        cards.append(
-            f'<div class="candidate-card {"selected" if candidate.selected else ""}">'
-            f'<b>{escape(candidate.ground_station_name)}</b><span>{state}</span>'
-            f'<small>Arrival {arrival} · Capacity '
-            f'{candidate.capacity_available_bits / 1_000_000:.1f} Mbit</small>'
+        rows.append(
+            f'<div class="candidate-row {"selected" if candidate.selected else ""}">'
+            f'<b>{escape(station_label(candidate.ground_station_id))}</b>'
+            f'<span class="candidate-state">{state}</span>'
+            f'<span>到着（経過） {arrival}</span>'
+            f'<span>容量 {candidate.capacity_available_bits / 1_000_000:.1f} Mbit</span>'
             '</div>'
         )
-    if not cards:
-        cards.append('<p>No contact candidate remains for this payload.</p>')
+    if not rows:
+        rows.append('<p>このデータに使える通信機会は残っていません。</p>')
     st.markdown(
-        '<div class="mission-panel"><div class="panel-heading">ROUTE DECISION</div>'
+        '<section class="mission-panel"><div class="panel-heading">この経路を選んだ理由</div>'
         f'<div class="decision-header"><div><strong>{escape(result.medical_data_id)}</strong>'
-        f'<span>{escape(result.priority.name)} · {escape(outcome)}</span></div>'
+        f'<span>{PRIORITY_LABELS[result.priority.name]} · {outcome_label(result)}</span></div>'
         f'<div><strong>{_mission_time(result.estimated_arrival_s)}</strong>'
-        '<span>HOSPITAL ARRIVAL</span></div></div>'
-        f'<p class="decision-reason">{escape(result.decision_reason)}</p>'
-        f'<div class="candidate-grid">{"".join(cards)}</div></div>',
+        '<span>病院到着（開始から）</span></div></div>'
+        f'<p class="decision-reason">{escape(route_explanation(result))}</p>'
+        f'<div class="candidate-list">{"".join(rows)}</div></section>',
         unsafe_allow_html=True,
     )
 
@@ -341,57 +348,52 @@ def _render_debrief_comparison(comparison: RoutingComparisonReport) -> None:
     rows = []
     for report in comparison.reports:
         metrics = report.metrics
-        label = report.strategy.value.replace('-', ' ').title()
+        label = ROUTING_LABELS[report.strategy.value]
         rows.append(
             '<div class="strategy-row">'
             f'<strong>{escape(label)}</strong>'
-            f'<span>{metrics.deadline_met_items}/{metrics.total_items}<small>deadlines</small></span>'
-            f'<span>{metrics.delivered_count}/{metrics.total_items}<small>delivered</small></span>'
+            f'<span>{metrics.deadline_met_items}/{metrics.total_items}<small>期限内</small></span>'
+            f'<span>{metrics.delivered_count}/{metrics.total_items}<small>到着</small></span>'
             f'<span>{_mission_time(metrics.average_end_to_end_latency_s)}'
-            '<small>mean latency</small></span></div>'
+            '<small>平均所要時間</small></span></div>'
         )
     st.markdown(
-        '<div class="mission-panel"><div class="panel-heading">ROUTING PERFORMANCE</div>'
+        '<section class="mission-panel"><div class="panel-heading">経路の選び方を比べる</div>'
         + ''.join(rows)
-        + '</div>',
+        + '</section>',
         unsafe_allow_html=True,
     )
 
 
 def _render_routing_demo() -> None:
     scenario = _load_routing_scenario()
-    st.markdown('<p class="mission-kicker">01 / ROUTING MISSION</p>', unsafe_allow_html=True)
-    st.header("Mission Control")
-    st.write("Move synthetic medical data through one LEO satellite and three ground sites.")
+    st.markdown('<p class="mission-kicker">任務 01　東アジアの衛星通信</p>', unsafe_allow_html=True)
+    st.header("医療データを届ける")
+    st.write("衛星と地上局の通信機会を使い、架空のデータが病院に届く経路を調べます。")
     st.markdown(
-        '<div class="mission-metrics">'
-        + _metric_card("PAYLOADS", str(len(scenario.medical_data)), "synthetic")
-        + _metric_card("GROUND SITES", str(len(scenario.ground_stations)), "East Asia")
-        + _metric_card("TIME WINDOW", f"{scenario.horizon_s / 60:.0f} min", "historical fixture")
-        + _metric_card("SATELLITE", "1", "single spacecraft")
-        + '</div>',
+        '<div class="scenario-strip">'
+        f'<span><b>{len(scenario.medical_data)}</b>件のデータ</span>'
+        f'<span><b>{len(scenario.ground_stations)}</b>か所の地上局</span>'
+        f'<span><b>{scenario.horizon_s / 60:.0f}</b>分のシミュレーション</span>'
+        '<span>衛星 1機</span></div>',
         unsafe_allow_html=True,
     )
     control_left, control_right = st.columns([2, 1], vertical_alignment="bottom")
     selected_strategy = control_left.selectbox(
-        "Routing mode",
+        "経路の選び方",
         options=("next-contact", "earliest-arrival", "deadline-aware"),
-        format_func=lambda value: {
-            "next-contact": "Next Contact",
-            "earliest-arrival": "Earliest Hospital Arrival",
-            "deadline-aware": "Deadline Aware",
-        }[value],
+        format_func=lambda value: ROUTING_LABELS[value],
         key="routing_strategy",
     )
     run_requested = control_right.button(
-        "Start Mission",
+        "シミュレーション開始",
         type="primary",
         key="compare_routing",
         use_container_width=True,
     )
 
     if run_requested:
-        with st.spinner("Propagating the frozen orbit and integrating RF contact capacity…"):
+        with st.spinner("保存済みの軌道から通信機会を計算しています…"):
             st.session_state.routing_comparison = compare_routing_strategies(scenario)
     if "routing_comparison" not in st.session_state:
         st.image(
@@ -399,12 +401,8 @@ def _render_routing_demo() -> None:
             width="stretch",
         )
         st.caption(
-            "Conceptual network diagram. Clinic uplink is abstracted; contacts come from a "
-            "frozen historical orbit fixture."
-        )
-        st.info(
-            "Start the offline mission to compare all three routing modes on the same "
-            "contact plan."
+            "通信経路の模式図です。診療所から衛星への送信は計算対象外です。"
+            "衛星の位置には保存済みの過去の軌道データを使います。"
         )
         return
 
@@ -412,9 +410,12 @@ def _render_routing_demo() -> None:
     report_by_strategy = {report.strategy.value: report for report in comparison.reports}
     selected_report = report_by_strategy[selected_strategy]
 
-    st.success("Mission complete. Every mode used the same synthetic workload and contact plan.")
+    st.markdown(
+        '<p class="run-note">計算完了。3つの選び方を、同じデータと通信機会で比べています。</p>',
+        unsafe_allow_html=True,
+    )
     selected_item_id = st.selectbox(
-        "Inspect payload",
+        "結果を見るデータ",
         options=tuple(result.medical_data_id for result in selected_report.results),
         key="routing_item",
     )
@@ -424,13 +425,13 @@ def _render_routing_demo() -> None:
         if result.medical_data_id == selected_item_id
     )
     if selected_result.delivered:
-        station_name = selected_result.selected_ground_station_name or "Ground site"
-        path_text = f"On-satellite payload → {station_name} → Hospital gateway"
+        station_name = station_label(selected_result.selected_ground_station)
+        path_text = f"衛星上のデータ → {station_name} → 病院"
     else:
-        path_text = f"{selected_result.medical_data_id}: no delivery route"
+        path_text = f"{selected_result.medical_data_id}：病院まで届かず"
     st.markdown(
-        '<div class="route-banner"><strong>SELECTED PAYLOAD PATH</strong>'
-        f'<span>{escape(path_text)}</span><small>Clinic uplink is abstracted.</small></div>',
+        '<div class="route-banner"><strong>選択中のデータ</strong>'
+        f'<span>{escape(path_text)}</span><small>診療所から衛星への送信は計算対象外</small></div>',
         unsafe_allow_html=True,
     )
     st.image(
@@ -438,101 +439,92 @@ def _render_routing_demo() -> None:
         width="stretch",
     )
     st.caption(
-        "Conceptual route map, not live tracking. The dashed clinic uplink is abstracted; "
-        "the bright path marks the selected delivery route."
+        "この図は通信経路の模式図で、現在位置の追跡ではありません。"
+        "太い線は選ばれた経路、診療所からの点線は省略した送信区間を示します。"
     )
     _render_payload_queue(selected_report, scenario)
     _render_route_decision(selected_result)
     _render_contact_timeline(selected_report, scenario.horizon_s)
 
-    st.subheader("Mission Debrief")
+    st.subheader("結果を振り返る")
     st.markdown(
-        '<div class="mission-metrics">'
-        + _metric_card(
-            "DELIVERED",
-            f"{selected_report.metrics.delivered_count}/{selected_report.metrics.total_items}",
-            selected_strategy,
-        )
-        + _metric_card(
-            "DEADLINES MET",
-            f"{selected_report.metrics.deadline_met_items}/{selected_report.metrics.total_items}",
-        )
-        + _metric_card("CONTACT USE", f"{selected_report.metrics.contact_utilization:.1%}")
-        + _metric_card(
-            "MEAN ARRIVAL LATENCY",
-            _mission_time(selected_report.metrics.average_end_to_end_latency_s),
-            "delivered only",
-        )
-        + '</div>',
+        '<div class="debrief-board"><div class="debrief-main">'
+        f'<strong>{selected_report.metrics.delivered_count}'
+        f'<small> / {selected_report.metrics.total_items}</small></strong>'
+        '<span>病院に届いたデータ</span></div><div class="debrief-facts">'
+        f'<p>期限内に到着 <b>{selected_report.metrics.deadline_met_items}件</b></p>'
+        f'<p>接触容量の使用率 <b>{selected_report.metrics.contact_utilization:.1%}</b></p>'
+        '<p>到着したデータの平均所要時間 '
+        f'<b>{_mission_time(selected_report.metrics.average_end_to_end_latency_s)}</b></p>'
+        '</div></div>',
         unsafe_allow_html=True,
     )
     comparison_frame = _routing_comparison_frame(comparison)
     _render_debrief_comparison(comparison)
     st.caption(
-        "Compare delivery and deadlines first. Rejecting late payloads can lower mean "
-        "latency without speeding up shared deliveries."
+        "平均所要時間は到着したデータだけで計算します。遅れるデータを送らない方式では、"
+        "同じデータが速く届かなくても平均値が小さくなる場合があります。"
     )
 
-    with st.expander("Engineering data · full results and reproducibility"):
+    with st.expander("詳しいデータと再現用ファイル"):
         st.download_button(
-            "Download reproducible routing results (JSON)",
+            "計算結果をJSONで保存",
             json.dumps(comparison.to_dict(), indent=2, allow_nan=False),
             file_name="medlink-routing-comparison.json",
             mime="application/json",
         )
-        st.markdown("**Synthetic workload**")
+        st.markdown("**架空データの一覧**")
         st.dataframe(_workload_frame(scenario), hide_index=True, width="stretch")
-        st.markdown("**All policy metrics**")
+        st.markdown("**3方式の指標**")
         st.dataframe(comparison_frame, hide_index=True, width="stretch")
         st.bar_chart(
-            comparison_frame.set_index("Routing strategy")[["Deadline satisfaction (%)"]],
-            y_label="Deadline satisfaction (%)",
+            comparison_frame.set_index("経路の選び方")[["期限内到着率（%）"]],
+            y_label="期限内到着率（%）",
         )
-        st.markdown("**Route outcomes**")
+        st.markdown("**経路の結果**")
         st.dataframe(_routing_result_frame(selected_report), hide_index=True, width="stretch")
-        st.markdown("**Candidate contacts**")
+        st.markdown("**候補となった通信機会**")
         st.dataframe(_candidate_frame(selected_result), hide_index=True, width="stretch")
-        st.markdown("**Contact plan**")
+        st.markdown("**通信機会の一覧**")
         st.dataframe(_routing_contact_frame(selected_report), hide_index=True, width="stretch")
         st.caption(
-            "Capacities are integrated from the existing SGP4 range and RF model using "
-            "deterministic midpoint sampling. Candidate tables retain explicit units and "
-            "Yes/No labels."
+            "容量はSGP4による距離とRFモデルから、一定刻みの中点サンプリングで積算しています。"
+            "数値の単位と候補の可否は表内に示しています。"
         )
 
 
 def _render_existing_simulation() -> None:
     scenario = _load_simulation_scenario()
-    st.header("Existing Intermittent-Link Simulation")
+    st.markdown('<p class="mission-kicker">通信リンクの記録</p>', unsafe_allow_html=True)
+    st.header("通信リンクを調べる")
     st.write(
-        "Compare deterministic FIFO, illustrative medical-priority, and EDF scheduling over "
-        "one shared historical-orbit link trace."
+        "衛星と地上局がつながる時間を使い、データを送る順番による違いを調べます。"
     )
-    columns = st.columns(4)
-    columns[0].metric("Synthetic items", len(scenario.medical_data))
-    columns[1].metric("Ground station", scenario.ground_station.name)
-    columns[2].metric("Simulation horizon", f"{scenario.horizon_s / 60:.0f} min")
-    columns[3].metric("Numerical timestep", f"{scenario.time_step_s:g} s")
+    st.markdown(
+        '<div class="scenario-strip">'
+        f'<span><b>{len(scenario.medical_data)}</b>件のデータ</span>'
+        f'<span>地上局 <b>{escape(station_name_label(scenario.ground_station.name))}</b></span>'
+        f'<span><b>{scenario.horizon_s / 60:.0f}</b>分のシミュレーション</span>'
+        f'<span>計算刻み {scenario.time_step_s:g}秒</span></div>',
+        unsafe_allow_html=True,
+    )
     st.caption(
-        f"Scenario {scenario.scenario_id} · {utc_iso(scenario.start_utc)} to "
-        f"{utc_iso(scenario.end_utc)} · frozen TLE epoch {utc_iso(scenario.tle.epoch_utc)}"
+        f"シナリオ {scenario.scenario_id}・{utc_iso(scenario.start_utc)}から"
+        f"{utc_iso(scenario.end_utc)}まで・保存済みTLEの基準時刻 "
+        f"{utc_iso(scenario.tle.epoch_utc)}"
     )
-    with st.expander("Inspect synthetic workload", expanded=False):
+    with st.expander("架空データの一覧", expanded=False):
         st.dataframe(_workload_frame(scenario), hide_index=True, width="stretch")
 
     selected_strategy = st.selectbox(
-        "Detailed delivery view",
+        "送る順番",
         options=("fifo", "priority", "edf"),
-        format_func=lambda value: {
-            "fifo": "FIFO",
-            "priority": "Medical Priority (illustrative)",
-            "edf": "Earliest Deadline First (EDF)",
-        }[value],
+        format_func=lambda value: SCHEDULER_LABELS[value],
         key="scheduler_strategy",
     )
-    run_requested = st.button("Run Simulation", type="primary", key="run_simulation")
+    run_requested = st.button("計算する", type="primary", key="run_simulation")
     if run_requested:
-        with st.spinner("Propagating the frozen orbit and simulating all schedulers…"):
+        with st.spinner("保存済みの軌道から通信状態を計算しています…"):
             st.session_state.simulation_comparison = compare_strategies(scenario)
             st.session_state.simulation_trace = _trace_frame(scenario)
     if "simulation_comparison" not in st.session_state:
@@ -543,46 +535,48 @@ def _render_existing_simulation() -> None:
     selected_report = report_by_strategy[selected_strategy]
     trace_frame = st.session_state.simulation_trace
 
-    st.success("Simulation complete. All schedulers used the same workload and link trace.")
-    st.subheader("Scheduler comparison")
+    st.markdown(
+        '<p class="run-note">計算完了。同じ架空データと通信状態で3方式を比べています。</p>',
+        unsafe_allow_html=True,
+    )
+    st.subheader("送る順番による違い")
     comparison_frame = _scheduler_comparison_frame(comparison)
     st.dataframe(comparison_frame, hide_index=True, width="stretch")
     st.bar_chart(
-        comparison_frame.set_index("Scheduler")[["Deadline satisfaction (%)"]],
-        y_label="Deadline satisfaction (%)",
+        comparison_frame.set_index("スケジューラ")[["期限内到着率（%）"]],
+        y_label="期限内到着率（%）",
     )
 
-    st.subheader("Contact and link")
+    st.subheader("衛星と地上局がつながる時間")
     contact_frame = _simulation_contact_frame(selected_report)
     if contact_frame.empty:
-        st.info("No contact occurs inside this simulation horizon.")
+        st.info("この計算時間内に通信機会はありません。")
     else:
         st.dataframe(contact_frame, hide_index=True, width="stretch")
     link_left, link_right = st.columns(2)
     with link_left:
         st.line_chart(
-            trace_frame.set_index("Elapsed time (min)")[["Elevation (deg)"]],
-            y_label="Elevation (deg)",
+            trace_frame.set_index("経過時間（分）")[["仰角（度）"]],
+            y_label="仰角（度）",
         )
         st.line_chart(
-            trace_frame.set_index("Elapsed time (min)")[["Range (km)"]],
-            y_label="Range (km)",
+            trace_frame.set_index("経過時間（分）")[["距離（km）"]],
+            y_label="距離（km）",
         )
     with link_right:
         st.line_chart(
-            trace_frame.set_index("Elapsed time (min)")[["Effective rate (Mbit/s)"]],
-            y_label="Effective rate (Mbit/s)",
+            trace_frame.set_index("経過時間（分）")[["実効速度（Mbit/s）"]],
+            y_label="実効速度（Mbit/s）",
         )
         st.caption(
-            "The displayed rate is the configured efficiency fraction of the Shannon "
-            "capacity upper bound."
+            "表示した速度は、シャノン容量の上限値に設定上の実装効率を掛けた値です。"
         )
 
-    st.subheader(f"Queue and delivery — {selected_strategy.upper()}")
+    st.subheader(f"送信順と到着結果：{SCHEDULER_LABELS[selected_strategy]}")
     st.dataframe(_delivery_frame(selected_report), hide_index=True, width="stretch")
     st.caption(
-        "An active transfer pauses at contact loss, retains transferred bits, and resumes "
-        "before another item is scheduled. New arrivals do not preempt it."
+        "通信が途切れると送信中のデータは一時停止し、送信済みの量を保持します。"
+        "再接続後に残りを送ってから次のデータへ進みます。"
     )
 
 
@@ -593,119 +587,43 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 st.markdown(
-    """
-<style>
-    .block-container {padding-top: 1.6rem; padding-bottom: 4rem; max-width: 1320px;}
-    h1, h2, h3 {letter-spacing: -0.025em;}
-    h1 {font-weight: 850; text-transform: uppercase;}
-    [data-testid="stDataFrame"] {border: 1px solid #31475a; border-radius: 0.4rem;}
-    [data-testid="stImage"] img {border: 1px solid #31475a; border-radius: 1.1rem;}
-    .mission-kicker, .mission-label, .panel-heading {font-size: .72rem; font-weight: 800;
-        letter-spacing: .14em; color: #9bb5c6;}
-    .mission-kicker {margin: 1.4rem 0 -.8rem; color: #67c9aa;}
-    .mission-metrics {display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: .7rem; margin: 1rem 0 1.5rem;}
-    .mission-metric {display: flex; flex-direction: column; min-height: 106px;
-        padding: .9rem 1rem; background: #14202d; border: 1px solid #31475a;
-        border-top: 3px solid #557e9b; border-radius: .45rem;}
-    .mission-metric strong {font-size: 1.55rem; line-height: 1.5; color: #f2f5f3;}
-    .mission-detail {font-size: .76rem; color: #a7bdd0;}
-    .mission-panel {background: #14202d; border: 1px solid #31475a;
-        border-radius: .55rem; padding: 1rem 1.1rem; margin: 1rem 0;}
-    .route-banner {display: flex; flex-wrap: wrap; gap: .4rem 1.1rem; align-items: baseline;
-        padding: .75rem 1rem; margin: .6rem 0; border-left: 4px solid #67c9aa;
-        background: #153032; border-radius: .25rem;}
-    .route-banner strong {font-size: .68rem; letter-spacing: .12em; color: #9bdec8;}
-    .route-banner span {font-size: .9rem; font-weight: 750;}
-    .route-banner small {color: #b3c6d1;}
-    .panel-heading {display: flex; justify-content: space-between; gap: 1rem;
-        padding-bottom: .75rem; border-bottom: 1px solid #31475a;}
-    .panel-heading span {color: #a7bdd0; font-weight: 600;}
-    .payload-row {display: grid; grid-template-columns: 12px minmax(180px, 2fr) 1fr 1.3fr 1.2fr;
-        gap: .7rem; align-items: center; padding: .72rem .15rem;
-        border-bottom: 1px solid #263949; color: #e6edf2; font-size: .86rem;}
-    .payload-row:last-child {border-bottom: 0;}
-    .priority-dot {width: 8px; height: 8px; border-radius: 50%; background: #89a6bd;}
-    .priority-dot.critical {background: #e37474;}
-    .priority-dot.high {background: #e9b44c;}
-    .priority-dot.normal {background: #67b5dd;}
-    .payload-name {display: flex; flex-direction: column;}
-    .payload-name small, .payload-size, .payload-station {color: #a7bdd0;}
-    .payload-status {font-size: .7rem; font-weight: 800; letter-spacing: .07em;}
-    .payload-status.done {color: #67c9aa;} .payload-status.failed {color: #e9b44c;}
-    .decision-header {display: flex; justify-content: space-between; gap: 1rem; margin: 1rem 0;}
-    .decision-header div {display: flex; flex-direction: column;}
-    .decision-header strong {font-size: 1.25rem; color: #f2f5f3;}
-    .decision-header span {font-size: .72rem; font-weight: 800;
-        letter-spacing: .09em; color: #a7bdd0;}
-    .decision-reason {font-size: .9rem; color: #d4e1e8;}
-    .candidate-grid {display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .55rem;}
-    .candidate-card {display: flex; flex-direction: column; gap: .3rem; padding: .8rem;
-        background: #1b2b39; border: 1px solid #354c5e; border-radius: .4rem;}
-    .candidate-card.selected {border-color: #67c9aa; background: #1b3537;}
-    .candidate-card b {font-size: .85rem;}
-    .candidate-card span {font-size: .68rem; color: #67c9aa; font-weight: 800;}
-    .candidate-card small {font-size: .75rem; color: #b3c6d1;}
-    .timeline-row {display: grid; grid-template-columns: 115px 1fr 85px;
-        gap: .8rem; align-items: center; margin: .8rem 0; font-size: .8rem;}
-    .timeline-row > span:last-child {text-align: right; color: #a7bdd0;}
-    .timeline-track {height: 13px; position: relative; border-radius: 7px; background: #263949;}
-    .contact-window {position: absolute; top: 0; bottom: 0;
-        border-radius: 7px; background: #67b5dd;}
-    .timeline-axis {display: flex; justify-content: space-between; margin-left: 128px;
-        margin-right: 95px; color: #a7bdd0; font-size: .72rem;}
-    .strategy-row {display: grid; grid-template-columns: minmax(180px, 2fr) repeat(3, 1fr);
-        gap: 1rem; align-items: center; padding: .75rem .15rem;
-        border-bottom: 1px solid #263949; font-size: .85rem;}
-    .strategy-row:last-child {border-bottom: 0;}
-    .strategy-row span {display: flex; flex-direction: column; font-weight: 800;}
-    .strategy-row small {font-weight: 500; color: #a7bdd0;}
-    @media (max-width: 750px) {
-        .mission-metrics {grid-template-columns: repeat(2, minmax(0, 1fr));}
-        .candidate-grid {grid-template-columns: 1fr;}
-        .payload-row {grid-template-columns: 12px minmax(90px, 1fr) 1fr;
-            gap: .4rem; font-size: .72rem;}
-        .payload-size, .payload-station {display: none;}
-        .timeline-row {grid-template-columns: 66px 1fr 55px; gap: .3rem; font-size: .67rem;}
-        .timeline-axis {margin-left: 69px; margin-right: 58px;}
-        .panel-heading span {display: none;}
-        .strategy-row {grid-template-columns: repeat(3, 1fr); gap: .45rem; font-size: .75rem;}
-        .strategy-row > strong {grid-column: 1 / -1;}
-    }
-</style>
-""",
+    "<style>" + (Path(__file__).parent / "style.css").read_text(encoding="utf-8") + "</style>",
     unsafe_allow_html=True,
 )
+
 st.title("MedLink-LEO")
-st.caption("OFFLINE NETWORK SIMULATOR  /  ORBIT · RF LINK · ROUTING · DEADLINES")
-st.warning(SAFETY_NOTICE)
+st.caption("衛星通信で医療データを届ける経路を試す")
 st.markdown(
-    "Run a bundled mission, choose a routing mode, and inspect the path taken by each payload. "
-    "[Source and engineering evidence](https://github.com/dev-yoshitani/medlink-leo)"
+    '<div class="safety-strip"><strong>利用上の注意</strong>'
+    f'<span>{escape(SAFETY_NOTICE)}</span></div>',
+    unsafe_allow_html=True,
+)
+st.markdown(
+    "[ソースコードと設計資料](https://github.com/dev-yoshitani/medlink-leo)"
 )
 
 mode = st.radio(
-    "Mode",
-    options=("Routing Mission", "Link Simulator"),
+    "見る画面",
+    options=("経路シミュレーション", "通信リンク"),
     horizontal=True,
     key="demo_mode",
 )
-if mode == "Routing Mission":
+if mode == "経路シミュレーション":
     _render_routing_demo()
 else:
     _render_existing_simulation()
 
-with st.expander("Assumptions, safety, and model boundary"):
+with st.expander("計算の前提と利用上の注意"):
     st.markdown(
         f"""
 - {SAFETY_NOTICE}
-- Priority labels are illustrative simulation classes, not clinical guidance.
-- The TLE is a frozen historical fixture propagated near its epoch, not current tracking data.
-- The routing model is one satellite and three ground stations feeding one hospital gateway.
-- Items are available on the satellite at creation time; the clinic uplink is abstracted.
-- A route uses one contact. Full DTN/BPv7, contact splitting, and multi-satellite routing are not
-  implemented.
-- Dynamic capacity uses an explicit 1 s midpoint timestep and a documented RF abstraction.
-- Protocol overheads, retransmissions, fading, interference, and adaptive coding are omitted.
+- 優先度はシミュレーション用の分類であり、臨床上の判断基準ではありません。
+- TLEは過去の保存済みデータで、その基準時刻付近を計算しています。現在の衛星位置ではありません。
+- 経路モデルは衛星1機、地上局3か所、病院側の中継点1か所です。
+- データは生成時点で衛星上にあると仮定し、診療所から衛星への送信は省略しています。
+- 1件の配送には1回の通信機会を使います。完全なDTN/BPv7、通信機会の分割、
+  複数衛星の経路選択は実装していません。
+- 通信容量は1秒刻みの中点サンプリングと、文書化したRFモデルで計算しています。
+- プロトコルの追加データ、再送、フェージング、干渉、適応符号化は含めていません。
 """
     )

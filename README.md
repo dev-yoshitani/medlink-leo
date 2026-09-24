@@ -122,16 +122,13 @@ python -m pip install -e ".[dev]"
 streamlit run app/streamlit_app.py
 ```
 
-In this branch, the local demo opens **Routing Mission** with a bundled three-station scenario and
-frozen TLE.
-**Start Mission** runs all three routing policies on one deterministic contact plan. The resulting
-2D scene highlights the selected route for the inspected payload; the payload manifest, candidate
-cards, contact timeline, and mission debrief expose the corresponding results. The scene is a
-conceptual diagram, not live tracking, and the clinic uplink remains abstracted. Original SVG
-illustrations live in `app/assets/`. **Engineering data** retains the full tables and JSON export.
-**Link Simulator** preserves the v1.0 scheduler and pause/resume demonstration. Results persist
-while switching strategies and inspecting items. Mean latency is explicitly limited to delivered
-items so rejection is not confused with faster shared deliveries.
+In this branch, the local demo opens the Japanese **経路シミュレーション** screen with a bundled
+three-station scenario and frozen TLE. **シミュレーション開始** runs all three routing policies on one
+deterministic contact plan. The illustrated map highlights the selected route; a payload ledger,
+candidate list, contact timeline, and results board explain what happened. The map is conceptual,
+not live tracking, and the clinic uplink remains abstracted. Original SVG illustrations live in
+`app/assets/`. **詳しいデータと再現用ファイル** retains the full tables and JSON export. **通信リンク** preserves
+the v1.0 scheduler and pause/resume demonstration. Mean latency includes delivered items only.
 
 The [public Streamlit demo](https://medlink-leo.streamlit.app/) runs from `main` with root
 `requirements.txt` and `app/streamlit_app.py`; no environment variables are required. See

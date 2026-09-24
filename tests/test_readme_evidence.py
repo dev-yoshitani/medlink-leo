@@ -62,9 +62,12 @@ def test_readme_routing_table_matches_committed_summary() -> None:
 
 def test_safety_disclaimer_is_visible_in_readme_and_web_demo() -> None:
     root = Path(__file__).resolve().parents[1]
-    required = "uses synthetic medical data only"
-    assert required in (root / "README.md").read_text(encoding="utf-8")
-    assert required in (root / "app" / "streamlit_app.py").read_text(encoding="utf-8")
+    readme = (root / "README.md").read_text(encoding="utf-8")
+    app_source = (root / "app" / "streamlit_app.py").read_text(encoding="utf-8")
+    assert "uses synthetic medical data only" in readme
+    assert "架空の医療データ" in app_source
+    assert "診断・治療・臨床判断" in app_source
+    assert "実際の医療活動には使えません" in app_source
 
 
 def test_publication_license_is_consistent() -> None:

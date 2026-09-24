@@ -11,9 +11,9 @@ from medlink.routing import RouteResult
 
 ASSET_DIR = Path(__file__).resolve().parent / "assets"
 STATIONS = (
-    ("gs-seoul", "SEOUL", 300),
-    ("gs-sapporo", "SAPPORO", 600),
-    ("gs-tokyo", "TOKYO", 900),
+    ("gs-seoul", "ソウル", 300),
+    ("gs-sapporo", "札幌", 600),
+    ("gs-tokyo", "東京", 900),
 )
 
 
@@ -41,7 +41,7 @@ def build_scene(result: RouteResult | None = None) -> str:
     for station_id, label, x in STATIONS:
         active = station_id == selected
         stroke = (
-            "#67c9aa" if active else "#50718c" if station_id in candidate_stations else "#405267"
+            "#2f8374" if active else "#8aa8a0" if station_id in candidate_stations else "#b3c2b8"
         )
         width = 5 if active else 2
         routes.append(
@@ -51,28 +51,28 @@ def build_scene(result: RouteResult | None = None) -> str:
         )
         if active:
             routes.append(
-                f'<path d="M{x} 370 Q {x + 70} 470 996 444" fill="none" '
-                'stroke="#67c9aa" stroke-width="5" />'
+                f'<path d="M{x} 418 Q {x + 70} 470 996 444" fill="none" '
+                'stroke="#2f8374" stroke-width="5" />'
             )
         stations.append(
-            f'<circle cx="{x}" cy="321" r="72" fill="{stroke}" opacity=".08" />'
+            f'<circle cx="{x}" cy="321" r="72" fill="{stroke}" opacity=".12" />'
             + _image("ground_station", x - 57, 280, 114, 84)
             + f'<text x="{x}" y="389" text-anchor="middle" class="node-label">{label}</text>'
             + f'<text x="{x}" y="409" text-anchor="middle" class="node-sub">'
             + (
-                "SELECTED ROUTE"
+                "選択した地上局"
                 if active
-                else "CANDIDATE" if station_id in candidate_stations else "GROUND SITE"
+                else "候補" if station_id in candidate_stations else "地上局"
             )
             + "</text>"
         )
     if selected:
         selected_label = next(label for station_id, label, _ in STATIONS if station_id == selected)
-        status = f"{selected_label} ROUTE SELECTED"
+        status = f"{selected_label}を経由"
     elif result:
-        status = "NO ROUTE DELIVERED"
+        status = "病院まで届かず"
     else:
-        status = "READY TO SIMULATE"
+        status = "開始前"
     packet = (
         "medical_packet_critical"
         if result and result.priority.name == "CRITICAL"
@@ -80,41 +80,42 @@ def build_scene(result: RouteResult | None = None) -> str:
     )
     packet_image = _image(packet, 1050, 70, 96, 72) if selected else ""
     packet_label = (
-        '<text x="1098" y="159" text-anchor="middle" class="node-sub">SELECTED PAYLOAD</text>'
+        '<text x="1098" y="159" text-anchor="middle" class="node-sub">選択中のデータ</text>'
         if selected
         else ""
     )
     svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 520"
-        role="img" aria-label="{escape(status)}. Conceptual single-satellite network diagram.">
-      <title>{escape(status)} — conceptual network diagram</title>
-      <defs><style>
-        .node-label {{font: 700 18px Arial,sans-serif; letter-spacing: 2px; fill: #e6edf2}}
-        .node-sub {{font: 700 11px Arial,sans-serif; letter-spacing: 1.7px; fill: #a7bdd0}}
-        .scene-text {{font: 700 13px Arial,sans-serif; letter-spacing: 2px; fill: #9bb5c6}}
-      </style></defs>
-      <rect width="1200" height="520" rx="24" fill="#0b1723"/>
-      <path d="M0 379 Q600 217 1200 379v141H0Z" fill="#142d39"/>
-      <path d="M0 379 Q600 217 1200 379" fill="none" stroke="#2d5362" stroke-width="2"/>
-      <g fill="#5e839a" opacity=".7">
-        <circle cx="93" cy="72" r="2"/><circle cx="209" cy="120" r="2"/>
-        <circle cx="337" cy="69" r="1.5"/><circle cx="1002" cy="80" r="2"/>
-        <circle cx="1083" cy="151" r="1.5"/><circle cx="784" cy="66" r="2"/>
-      </g>
-      <text x="40" y="41" class="scene-text">EAST ASIA / HISTORICAL ORBIT FIXTURE</text>
+        role="img" aria-label="{escape(status)}。衛星通信経路の模式図。">
+      <title>{escape(status)} — 衛星通信経路の模式図</title>
+      <defs>
+        <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+          <path d="M40 0H0V40" fill="none" stroke="#dfe6dc" stroke-width="1"/>
+        </pattern>
+        <style>
+          .node-label {{font: 700 19px 'Yu Gothic','Noto Sans JP',sans-serif; fill: #253f43}}
+          .node-sub {{font: 600 13px 'Yu Gothic','Noto Sans JP',sans-serif; fill: #4d6c6b}}
+          .scene-text {{font: 700 15px 'Yu Gothic','Noto Sans JP',sans-serif; fill: #45665f}}
+        </style>
+      </defs>
+      <rect width="1200" height="520" rx="14" fill="#f4f3e9"/>
+      <rect width="1200" height="520" rx="14" fill="url(#grid)"/>
+      <path d="M0 379 Q600 217 1200 379v141H0Z" fill="#dbe9dc"/>
+      <path d="M0 379 Q600 217 1200 379" fill="none" stroke="#7ba795" stroke-width="3"/>
+      <text x="40" y="41" class="scene-text">保存済みの軌道による通信経路</text>
       <text x="1160" y="41" text-anchor="end" class="scene-text">{escape(status)}</text>
       {packet_label}
-      <path d="M151 437 Q 270 234 600 190" fill="none" stroke="#54788d"
+      <path d="M151 437 Q 270 234 600 190" fill="none" stroke="#8da99d"
         stroke-width="2" stroke-dasharray="7 8"/>
       {''.join(routes)}
       {_image('satellite', 515, 80, 170, 127)}
-      <text x="600" y="219" text-anchor="middle" class="node-label">LEO SATELLITE</text>
-      <text x="600" y="239" text-anchor="middle" class="node-sub">SINGLE SPACECRAFT</text>
+      <text x="600" y="219" text-anchor="middle" class="node-label">低軌道衛星</text>
+      <text x="600" y="239" text-anchor="middle" class="node-sub">衛星 1機</text>
       {''.join(stations)}
       {_image('remote_clinic', 67, 380, 152, 114)}
-      <text x="143" y="507" text-anchor="middle" class="node-sub">REMOTE CLINIC</text>
+      <text x="143" y="507" text-anchor="middle" class="node-sub">遠隔地の診療所</text>
       {_image('hospital', 977, 380, 132, 108)}
-      <text x="1043" y="507" text-anchor="middle" class="node-sub">HOSPITAL GATEWAY</text>
+      <text x="1043" y="507" text-anchor="middle" class="node-sub">病院側の中継点</text>
       {packet_image}
-      <text x="259" y="466" class="node-sub">UPLINK ABSTRACTED</text>
+      <text x="259" y="466" class="node-sub">送信区間は省略</text>
     </svg>'''
     return svg
