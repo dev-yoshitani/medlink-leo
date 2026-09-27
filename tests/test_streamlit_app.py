@@ -7,6 +7,7 @@ from streamlit.testing.v1 import AppTest
 
 from app.mission_scene import ASSET_DIR, build_scene
 from app.ui_labels import ROUTING_LABELS, STATION_LABELS
+from medlink.game import GameState, accept_contract, dispatch
 from medlink.routing import compare_routing_strategies
 from medlink.scenarios import load_scenario
 
@@ -41,6 +42,8 @@ def test_mission_scene_uses_bundled_vectors_and_actual_selected_route() -> None:
 def test_default_streamlit_routing_demo_runs_offline() -> None:
     app_path = Path(__file__).resolve().parents[1] / "app" / "streamlit_app.py"
     app = AppTest.from_file(str(app_path), default_timeout=30).run()
+    assert app.radio(key="demo_mode").value == "通信センター"
+    app.radio(key="demo_mode").set_value("経路シミュレーション").run(timeout=30)
 
     assert not app.exception
     assert app.title[0].value == "MedLink-LEO"
@@ -108,3 +111,17 @@ def test_existing_simulation_mode_remains_available() -> None:
     app.selectbox(key="scheduler_strategy").set_value("edf").run(timeout=30)
     assert not app.exception
     assert any("送信順と到着結果：期限が近い順（EDF）" == header.value for header in app.subheader)
+
+
+def test_campaign_save_and_report_controls_render_for_resumed_delivery() -> None:
+    app_path = Path(__file__).resolve().parents[1] / "app" / "streamlit_app.py"
+    app = AppTest.from_file(str(app_path), default_timeout=30).run()
+    app.session_state["campaign_state"] = dispatch(
+        accept_contract(GameState(), "morning"), "deadline-aware", "edf",
+    )
+    app.session_state["campaign_restored"] = True
+    app.run(timeout=30)
+
+    assert not app.exception
+    assert len(app.get("download_button")) == 2
+    assert app.button[0].label == "このセーブで再開"

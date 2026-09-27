@@ -22,8 +22,13 @@ python -m pip install -e ".[dev]"
 streamlit run app/streamlit_app.py
 ```
 
-Streamlit normally serves the app at `http://localhost:8501`. In this branch, **経路シミュレーション**
-is the default screen; **通信リンク** preserves the v1.0 demo.
+Streamlit normally serves the app at `http://localhost:8501`. In this branch, **通信センター**
+is the default screen. **経路シミュレーション** and **通信リンク** retain the engineering demos.
+The Windows [Start-Game.bat](../Start-Game.bat) launcher uses `http://127.0.0.1:8502/` on
+the loopback interface. Campaign progress is stored in the browser, with JSON export/import;
+it does not require a server database or persistent server disk. Keep the same origin when
+resuming. See [game.md](game.md) for setup, save behavior and model boundaries.
+This branch has been checked locally; the deployment record below concerns the earlier public UI.
 
 ## Streamlit Community Cloud
 

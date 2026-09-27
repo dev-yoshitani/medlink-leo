@@ -9,6 +9,7 @@ from typing import Any
 
 import pandas as pd
 import streamlit as st
+from game_ui import render_game
 from mission_scene import build_scene
 from ui_labels import (
     DATA_LABELS,
@@ -604,11 +605,13 @@ st.markdown(
 
 mode = st.radio(
     "見る画面",
-    options=("経路シミュレーション", "通信リンク"),
+    options=("通信センター", "経路シミュレーション", "通信リンク"),
     horizontal=True,
     key="demo_mode",
 )
-if mode == "経路シミュレーション":
+if mode == "通信センター":
+    render_game()
+elif mode == "経路シミュレーション":
     _render_routing_demo()
 else:
     _render_existing_simulation()

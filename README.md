@@ -60,7 +60,7 @@ Remote Clinic (uplink abstracted)
   ground station that item should use**.
 - Every result exposes candidates, capacity, estimated hospital arrival, deadline feasibility,
   failure reason, and a deterministic **Why this route?** explanation.
-- The default offline Streamlit mode compares all routes with no login, API key, or live TLE.
+- The offline **経路シミュレーション** screen compares all routes with no login, API key, or live TLE.
 
 ## Real v1.1 routing benchmark
 
@@ -117,13 +117,28 @@ simulator; it does not duplicate orbital or RF equations. See
 
 ## Interactive demo
 
+### 日本語の運用・育成ゲーム
+
+このブランチでは **通信センター** が最初に開きます。依頼を受け、衛星から地上局へ
+データを届けて報酬を受け取り、アンテナと地上回線を育てる2Dゲームです。
+札幌から始め、運用実績と資金でソウル・東京を開放できます。5種類の依頼を繰り返せて、
+進行はブラウザーに自動保存されます。荷物の移動は実際の計算結果を再生し、
+一時停止・速度変更・最後まで進める操作ができます。
+
+Windowsでこの作業環境を使う場合は、**[Start-Game.bat](Start-Game.bat) をダブルクリック**してください。
+`http://127.0.0.1:8502/` で開きます。閉じた後も同じファイルから再開できます。
+初めて環境を用意する場合の手順、設備の効果、セーブの保管方法は [遊び方](docs/game.md) にあります。
+アンテナの利得と地上回線の遅延を既存の計算に渡すため、強化は通信容量・病院への到着時間に反映されます。
+
+### Engineering screens
+
 ```powershell
 python -m pip install -e ".[dev]"
 streamlit run app/streamlit_app.py
 ```
 
-In this branch, the local demo opens the Japanese **経路シミュレーション** screen with a bundled
-three-station scenario and frozen TLE. **シミュレーション開始** runs all three routing policies on one
+Select **経路シミュレーション** for the bundled three-station scenario and frozen TLE.
+**シミュレーション開始** runs all three routing policies on one
 deterministic contact plan. The illustrated map highlights the selected route; a payload ledger,
 candidate list, contact timeline, and results board explain what happened. The map is conceptual,
 not live tracking, and the clinic uplink remains abstracted. Original SVG illustrations live in
@@ -266,6 +281,8 @@ src/medlink/simulation/    fixed/intermittent transfer and shared capacity integ
 src/medlink/orbit/         frozen TLE, SGP4, station visibility
 src/medlink/link/          RF equations and effective-rate abstraction
 app/                       Streamlit presentation layer
+app/game/                  Japanese 2D campaign UI and replay
+src/medlink/game.py         Campaign rules using the existing routing engine
 examples/                  synthetic v1.0 and v1.1 scenarios
 experiments/               independent scheduler and routing benchmark configs
 docs/assets/               small generated evidence committed for review
