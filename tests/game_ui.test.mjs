@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {SAVE_KEY, timeLabel, parcelStatus, parcelPosition, advanceTime, readSave, writeSave}
+import {SAVE_KEY, TUTORIAL_KEY, timeLabel, parcelStatus, parcelPosition, advanceTime,
+  readSave, writeSave, tutorialStage, readTutorialPreference, writeTutorialPreference}
   from '../app/game/logic.mjs';
 
 const result = {created:10, departure:100, rf_complete:200, arrival:230,
@@ -52,4 +53,41 @@ test('storage errors do not claim a successful save', () => {
   const storage = {getItem:() => {throw Error('blocked');}, setItem:() => {throw Error('blocked');}};
   assert.equal(readSave(storage), null);
   assert.equal(writeSave(storage, {}), false);
+});
+
+test('guide follows the current operation and replay result', () => {
+  const model = {active:null, report:null, state:{dispatches:0},
+    stations:[{opened:true, antenna:1, backhaul:1}]};
+  assert.equal(tutorialStage(model), 0);
+  model.stations[0].antenna = 2;
+  assert.equal(tutorialStage(model), 0);
+  model.active = {contract_id:'morning'};
+  assert.equal(tutorialStage(model), 1);
+  model.report = {end_time:360};
+  assert.equal(tutorialStage(model, 359), 2);
+  assert.equal(tutorialStage(model, 360), 3);
+  model.active = null;
+  model.report = null;
+  model.state.dispatches = 1;
+  assert.equal(tutorialStage(model), 5);
+  model.stations[0].antenna = 1;
+  assert.equal(tutorialStage(model), 4);
+  model.active = {contract_id:'second'};
+  assert.equal(tutorialStage(model), 1);
+});
+
+test('guide visibility is stored separately and invalid preferences recover', () => {
+  const values = new Map();
+  const storage = {getItem:key => values.get(key) ?? null, setItem:(key, value) => values.set(key, value)};
+  assert.deepEqual(readTutorialPreference(storage), {open:true});
+  assert.equal(writeTutorialPreference(storage, false), true);
+  assert.equal(values.get(TUTORIAL_KEY), '{"open":false}');
+  assert.deepEqual(readTutorialPreference(storage), {open:false});
+  values.set(TUTORIAL_KEY, '{"open":"false"}');
+  assert.deepEqual(readTutorialPreference(storage), {open:true});
+  values.set(TUTORIAL_KEY, 'broken');
+  assert.deepEqual(readTutorialPreference(storage), {open:true});
+  const blocked = {getItem:() => {throw Error('blocked');}, setItem:() => {throw Error('blocked');}};
+  assert.deepEqual(readTutorialPreference(blocked), {open:true});
+  assert.equal(writeTutorialPreference(blocked, false), false);
 });

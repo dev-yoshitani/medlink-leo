@@ -31,6 +31,33 @@ small,.muted {color:var(--muted);}
 .goal-line {padding:9px 3px; font-size:12px; color:#526b61;}
 .notice {padding:9px 13px; border-left:4px solid var(--gold); background:#fbefcf;
   margin:0 0 14px; min-height:40px;}
+.guide-trigger {display:flex; align-items:center; justify-content:space-between; gap:10px;
+  margin:0 0 7px; font-size:12px; font-weight:800; color:#546a60;}
+.guide-panel {padding:12px 15px; margin:0 0 16px; background:#f8f5e9;
+  border:1px solid #b9b398; border-left:5px solid #b88e59; border-radius:3px;}
+.guide-main {display:flex; justify-content:space-between; align-items:center; gap:16px;}
+.guide-main > div:first-child {min-width:0;}
+.guide-count {display:block; font-weight:800; color:#80643c; letter-spacing:.04em;}
+.guide-panel h2 {font-size:16px; margin:2px 0 3px;}
+.guide-panel p {font-size:12px; color:#52685f;}
+.guide-nav {display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; flex:none;}
+.guide-panel details {margin:4px 0 0;}
+.guide-panel details summary {padding:3px 0;}
+.guide-panel ul {margin:2px 0 0; padding-left:21px;}
+.guide-hint {display:none; margin:7px 0; padding:4px 8px; font-size:11px;
+  font-weight:700; color:#755934; background:#fbefcf; border-left:3px solid #b88e59;}
+#board.tutorial-on[data-step="0"] .guide-hint.step-0,
+#board.tutorial-on[data-step="1"] .guide-hint.step-1,
+#board.tutorial-on[data-step="2"] .guide-hint.step-2,
+#board.tutorial-on[data-step="3"] .guide-hint.step-3,
+#board.tutorial-on[data-step="4"] .guide-hint.step-4,
+#board.tutorial-on[data-step="5"] .guide-hint.step-5 {display:block;}
+#board.tutorial-on[data-step="0"] .tutorial-target.step-0,
+#board.tutorial-on[data-step="1"] .tutorial-target.step-1,
+#board.tutorial-on[data-step="2"] .tutorial-target.step-2,
+#board.tutorial-on[data-step="3"] .tutorial-target.step-3,
+#board.tutorial-on[data-step="4"] .tutorial-target.step-4,
+#board.tutorial-on[data-step="5"] .tutorial-target.step-5 {outline:2px solid #b88e59; outline-offset:2px;}
 .workspace {display:grid; grid-template-columns:230px minmax(0,1fr); gap:17px; align-items:start;}
 .map-column {min-width:0;}
 .request-book {border:1px solid #b9b398; border-top:5px solid #b88e59; background:#f9f5e8;
@@ -45,6 +72,7 @@ small,.muted {color:var(--muted);}
 .contract.locked h3 {color:#7b8072;}
 .contract-meta {display:flex; justify-content:space-between; color:#6f694f; font-size:11px;}
 .contract button {width:100%; margin-top:7px;}
+.contract .guide-hint {grid-column:1/-1;}
 .map-board {border:2px solid #668574; border-radius:8px; box-shadow:4px 4px 0 #d5dac9;
   background:#f9f8ed; overflow:hidden;}
 .map-heading {padding:8px 13px; display:flex; justify-content:space-between; gap:10px;
@@ -119,6 +147,8 @@ summary {cursor:pointer; padding:8px 0; font-weight:700;}
   box-shadow:0 3px 10px #203b4326; z-index:3; white-space:nowrap;}
 .busy-overlay[hidden] {display:none;}
 @media(max-width:850px) {
+  .guide-main {align-items:flex-start; flex-direction:column; gap:9px;}
+  .guide-nav {justify-content:flex-start;}
   .workspace {grid-template-columns:minmax(0,1fr);}
   .request-book {order:2;}
   .map-column {order:1;}

@@ -1,5 +1,32 @@
 export const SAVE_KEY = 'medlink-leo-campaign-v1';
+export const TUTORIAL_KEY = 'medlink-leo-tutorial-v1';
 export const STATION_X = {'gs-seoul': 250, 'gs-sapporo': 550, 'gs-tokyo': 850};
+
+export function tutorialStage(model, time = 0) {
+  if (model?.active) {
+    if (!model.report) return 1;
+    return time >= model.report.end_time ? 3 : 2;
+  }
+  if (!model?.state?.dispatches) return 0;
+  return model.stations?.some(station => station.opened &&
+    (station.antenna > 1 || station.backhaul > 1)) ? 5 : 4;
+}
+
+export function readTutorialPreference(storage) {
+  try {
+    const value = storage.getItem(TUTORIAL_KEY);
+    if (value === null) return {open:true};
+    const preference = JSON.parse(value);
+    return typeof preference?.open === 'boolean' ? {open:preference.open} : {open:true};
+  } catch { return {open:true}; }
+}
+
+export function writeTutorialPreference(storage, open) {
+  try {
+    storage.setItem(TUTORIAL_KEY, JSON.stringify({open}));
+    return true;
+  } catch { return false; }
+}
 
 export function timeLabel(value) {
   if (value == null || !Number.isFinite(value)) return '—';

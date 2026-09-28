@@ -1,10 +1,20 @@
 import {SAVE_KEY, STATION_X, timeLabel, parcelStatus, parcelPosition,
-  advanceTime, readSave, writeSave} from './logic.mjs';
+  advanceTime, readSave, writeSave, tutorialStage, readTutorialPreference,
+  writeTutorialPreference} from './logic.mjs';
 
 const root = document.getElementById('board');
 let model, args, selectedStation = 'gs-sapporo', restoreSent = false, pendingId = null;
 let storageOK = true, replayKey = null, clock = 0, playing = false, speed = 1, lastFrame = null;
 let savedNotice = '';
+let tutorial = null, guideManualStep = null, shownGuide = '';
+const guideSteps = [
+  {title:'最初の依頼を受ける', body:'「依頼手帳」の「朝の定期便」で「受注する」を押します。受注に費用はかかりません。'},
+  {title:'配送方針を決める', body:'「経路の選び方」と「送る順番」を選び、「配送開始」を押します。迷ったら初期設定のままで進められます。'},
+  {title:'通信を見届ける', body:'地図の荷物と各データの状態を見ます。「一時停止」や速度変更、「最後まで」も使えます。再生速度を変えても配送結果は変わりません。'},
+  {title:'結果を確認する', body:'期限内に届いた件数と報酬を確認し、「報酬を受け取って次へ」を押します。詳しい理由は「配送結果と計算の記録」で見られます。'},
+  {title:'設備を強化する', body:'「設備を育てる」で地上局を選びます。受信アンテナは通信容量、地上回線は病院までの遅延に効きます。資金が足りなければ定期便をもう一度受けられます。'},
+  {title:'次の目標に進む', body:'画面上部の「次の目標」を見ながら依頼を続けます。達成回数と運用資金を増やすと、依頼や地上局が開放されます。進行はこのブラウザーに自動保存されます。'},
+];
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char =>
   ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[char]));
 const money = value => Number(value).toLocaleString('ja-JP');
@@ -26,6 +36,54 @@ function send(action, fields = {}) {
   message('streamlit:setComponentValue', {
     value:{id:pendingId, action, ...fields}, dataType:'json',
   });
+}
+function guideMarkup() {
+  const open = tutorial?.open ?? true;
+  const step = guideManualStep ?? tutorialStage(model, clock);
+  const guide = guideSteps[step];
+  return `<div class="guide-trigger"><span>運用ガイド</span>
+    <button class="small" id="guide-toggle" aria-expanded="${open}" aria-controls="guide-panel">${open ? '案内を閉じる' : '遊び方を開く'}</button></div>
+    ${open ? `<section class="guide-panel" id="guide-panel" aria-label="運用ガイド" aria-live="polite">
+      <div class="guide-main"><div><small class="guide-count">${step + 1} / ${guideSteps.length}　${guideManualStep === null ? '今の操作' : '見直し中'}</small>
+        <h2>${guide.title}</h2><p>${guide.body}</p></div>
+        <div class="guide-nav"><button class="small" id="guide-prev"${disabled(step === 0)}>前へ</button>
+          <button class="small" id="guide-next"${disabled(step === guideSteps.length - 1)}>次へ</button>
+          ${guideManualStep === null ? '' : '<button class="small" id="guide-current">今の操作へ</button>'}</div></div>
+      <details><summary>困ったとき</summary><ul>
+        <li>依頼を達成できなくても資金は減りません。同じ依頼を受け直せます。</li>
+        <li>遅れた理由は配送後の「配送結果と計算の記録」で確認できます。</li>
+        <li>セーブをファイルで残す場合は、画面下の「セーブファイル」を開きます。</li>
+      </ul></details>
+    </section>` : '<section id="guide-panel" hidden></section>'}`;
+}
+
+function syncGuide(force = false) {
+  const stage = tutorialStage(model, clock);
+  const marker = `${tutorial?.open}-${guideManualStep ?? stage}-${guideManualStep === null ? 'auto' : 'manual'}`;
+  if (!force && marker === shownGuide) return;
+  shownGuide = marker;
+  root.dataset.step = String(stage);
+  root.classList.toggle('tutorial-on', !!tutorial?.open && guideManualStep === null);
+  const shell = document.getElementById('guide-shell');
+  if (!shell) return;
+  shell.innerHTML = guideMarkup();
+  document.getElementById('guide-toggle').onclick = () => {
+    tutorial.open = !tutorial.open;
+    guideManualStep = tutorial.open ? 0 : null;
+    writeTutorialPreference(localStorage, tutorial.open);
+    syncGuide();
+  };
+  if (tutorial.open) {
+    document.getElementById('guide-prev').onclick = () => {
+      guideManualStep = Math.max(0, (guideManualStep ?? stage) - 1); syncGuide();
+    };
+    document.getElementById('guide-next').onclick = () => {
+      guideManualStep = Math.min(guideSteps.length - 1, (guideManualStep ?? stage) + 1); syncGuide();
+    };
+    const current = document.getElementById('guide-current');
+    if (current) current.onclick = () => {guideManualStep = null; syncGuide();};
+  }
+  fit();
 }
 function facilities() {
   return model.stations.map(station => {
@@ -95,10 +153,11 @@ function contracts() {
     <div class="book-title"><h2>依頼手帳</h2><small>繰り返し受注できます。失敗しても資金は減りません。</small></div>
     ${model.contracts.map(contract => {
       const locked = model.state.successes < contract.required;
-      return `<article class="contract ${locked ? 'locked' : ''}">
+      return `<article class="contract ${locked ? 'locked' : ''} ${contract === model.contracts[0] ? 'tutorial-target step-0' : ''}">
         <h3>${esc(contract.title)}</h3><div class="contract-meta">
         <span>${contract.target}/${contract.total}件を期限内</span><span>達成 +${contract.bounty} C</span></div>
         <p>${esc(contract.description)}</p>
+        ${contract === model.contracts[0] ? '<small class="guide-hint step-0">ここから「朝の定期便」を受注</small>' : ''}
         <button data-action="accept" data-contract="${contract.id}"${disabled(locked || model.active)}>${
           locked ? `達成${contract.required}回で開放` : model.active?.contract_id === contract.id ? '受注中' : '受注する'}</button>
       </article>`;
@@ -133,7 +192,7 @@ function operations() {
       'deadline-aware':'期限内の到着を優先','earliest-arrival':'病院への到着を早める',
       'next-contact':'次の通信機会を使う'}[mission.strategy]} / 送信順：${{
       edf:'期限が近い順',priority:'優先度順（説明用）',fifo:'生成された順'}[mission.scheduler]}</small></p>` : ''}
-    ${planning ? `<div class="policy-controls">
+    ${planning ? `<div class="policy-controls tutorial-target step-1">
       <label>経路の選び方<select id="strategy">
         <option value="deadline-aware">期限内の到着を優先</option>
         <option value="earliest-arrival">病院への到着を早める</option>
@@ -141,21 +200,23 @@ function operations() {
       <label>送る順番<select id="scheduler">
         <option value="edf">期限が近い順</option><option value="priority">優先度順（説明用）</option>
         <option value="fifo">生成された順</option></select></label>
-      </div>` : `<div class="playback-controls">
+      </div><p class="guide-hint step-1">初期設定は期限内の到着と、期限が近いデータを優先します。</p>` : `<div class="playback-controls tutorial-target step-2">
         <button id="play" class="small">${playing ? '一時停止' : '再生'}</button>
         <button id="rewind" class="small">最初から</button>
         <button id="speed" class="small">${speed}×</button>
         <button id="finish" class="small">最後まで</button>
         <time id="clock">${timeLabel(clock)}</time>
-      </div><div class="progress-track"><div id="progress" class="progress-fill"></div></div>
+      </div><p class="guide-hint step-2">「最後まで」を押すと、結果をすぐ確認できます。</p>
+      <div class="progress-track"><div id="progress" class="progress-fill"></div></div>
       <small>計算結果の再生です。通常速度では約36秒で進みます。</small>`}
     <div class="parcel-list">${parcelRows()}</div>
     ${planning ? `<div class="actions"><button class="primary" data-action="dispatch">配送開始</button>
       <button data-action="abandon">受注を取り下げる</button></div>` : `
-      <div id="result-stamp" class="result-stamp ${model.report.success ? '' : 'failed'}" hidden>
+      <div id="result-stamp" class="result-stamp tutorial-target step-3 ${model.report.success ? '' : 'failed'}" hidden>
         <div><strong>${model.report.success ? '依頼達成！' : '次の運用につなげよう'}</strong>
         <small>期限内 ${model.report.on_time}/${model.report.total}件 · 到着 ${model.report.delivered}件</small></div>
         <b>+${model.report.reward} C</b></div>
+      <p class="guide-hint step-3">件数と報酬を確認してから、次へ進みます。</p>
       <div class="actions"><button class="primary" data-action="settle" id="claim" disabled>報酬を受け取って次へ</button></div>
       <details><summary>配送結果と計算の記録</summary>
         ${model.report.results.map(result => `<p><b>${esc(mission.items.find(item => item.id === result.id)?.name || result.id)}</b>
@@ -178,8 +239,9 @@ function equipment() {
       <button data-action="upgrade" data-equipment="${kind}"${disabled(max || busy || model.state.credits < cost)}>${
         max ? '強化済み' : `強化 ${money(cost)} C`}</button></div>`;
   });
-  return `<section class="ops-sheet" aria-label="地上局の設備">
+  return `<section class="ops-sheet tutorial-target step-4" aria-label="地上局の設備">
     <div class="section-line"><h2>設備を育てる</h2><small>配送の前に変更できます</small></div>
+    <p class="guide-hint step-4">地上局を選び、使える資金に合わせて強化します。</p>
     <div class="equipment-head">${model.stations.map(s =>
       `<button data-select-station="${s.id}" class="${s.id === selectedStation ? 'selected' : ''}">${s.name}${s.opened ? '' : '（未開放）'}</button>`).join('')}</div>
     <div class="facility-detail"><img src="${model.assets.ground_station}" alt="${station.name}の地上局">
@@ -203,8 +265,10 @@ function render() {
     <span class="eyebrow">第${model.chapter}章　${esc(model.chapter_title)}</span><h1>通信センターの運用日誌</h1>
     </div><div class="stats"><div><b>${money(model.state.credits)} <small>C</small></b><small>運用資金</small></div>
       <div><b>${model.state.successes}<small> 回</small></b><small>依頼達成</small></div></div></header>
-    <div class="goal-line">次の目標　${esc(model.next_goal)}</div>
+    <div class="goal-line tutorial-target step-5">次の目標　${esc(model.next_goal)}
+      <small class="guide-hint step-5">次の依頼や地上局の開放条件を確認</small></div>
     <div class="notice" role="status">${esc(savedNotice || args.notice || '依頼を受け、通信センターを少しずつ育てよう。')}</div>
+    <div id="guide-shell"></div>
     <div class="workspace">${contracts()}<div class="map-column">${mapScene()}${operations()}${equipment()}</div></div>
     <details><summary>運用の記録 · 配送 ${model.state.dispatches}回 / 累計到着 ${model.state.delivered}件</summary>
       ${model.state.history.length ? [...model.state.history].reverse().map(record => `<div class="history-row">
@@ -221,7 +285,7 @@ function render() {
     <p class="muted"><small>資金・報酬・開放条件はゲーム用です。医療データは架空で、優先度は説明用の分類です。
       元の経路・RF計算は画面上部の「経路シミュレーション」「通信リンク」で確認できます。</small></p>
     <div id="busy" class="busy-overlay" hidden>通信センターの記録を更新しています…</div>`;
-  bind(); updatePlayback();
+  bind(); syncGuide(true); updatePlayback();
   if (pendingId) {
     root.querySelectorAll('button[data-action]').forEach(button => {button.disabled = true;});
     document.getElementById('busy').hidden = false;
@@ -293,6 +357,7 @@ function updatePlayback() {
       document.getElementById(pathId)?.classList.add('transmitting');
     }
   });
+  syncGuide();
 }
 
 function tick(now) {
@@ -309,6 +374,7 @@ window.addEventListener('message', event => {
   if (event.source !== parent || event.data?.type !== 'streamlit:render') return;
   args = event.data.args; model = args.model;
   if (!model) return;
+  if (!tutorial) tutorial = readTutorialPreference(localStorage);
   if (args.restore_requested && !restoreSent) {
     restoreSent = true;
     let save; try {save = readSave(localStorage);} catch {save = null;}
