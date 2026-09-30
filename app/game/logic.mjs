@@ -1,6 +1,13 @@
-export const SAVE_KEY = 'medlink-leo-campaign-v1';
+export const SAVE_KEY = 'medlink-leo-campaign-v2';
+export const LEGACY_SAVE_KEY = 'medlink-leo-campaign-v1';
 export const TUTORIAL_KEY = 'medlink-leo-tutorial-v1';
 export const STATION_X = {'gs-seoul': 250, 'gs-sapporo': 550, 'gs-tokyo': 850};
+
+export function rewardControl(report, time, pending = false) {
+  const action = report ? (time >= report.end_time ? 'settle' : 'reveal') : null;
+  return {action, disabled:!action || pending, label:action === 'settle'
+    ? '報酬を受け取って次へ' : '結果を確認して報酬へ'};
+}
 
 export function tutorialStage(model, time = 0) {
   if (model?.active) {
@@ -65,14 +72,22 @@ export function advanceTime(time, elapsedMs, speed, endTime) {
 }
 
 export function readSave(storage) {
-  try { return storage.getItem(SAVE_KEY); } catch { return null; }
+  try { return storage.getItem(SAVE_KEY) ?? storage.getItem(LEGACY_SAVE_KEY); }
+  catch { return null; }
 }
 
-export function writeSave(storage, state) {
+export function writeSave(storage, state, persistedSnapshot = null) {
   try {
     const text = JSON.stringify(state);
-    const previous = storage.getItem(SAVE_KEY);
+    // A passive tab must not overwrite progress saved by another tab.
+    if (text === persistedSnapshot) return true;
+    const current = storage.getItem(SAVE_KEY);
+    const previous = current ?? storage.getItem(LEGACY_SAVE_KEY);
     if (previous && previous !== text) storage.setItem(`${SAVE_KEY}.backup`, previous);
+    else if (current === null) {
+      const backup = storage.getItem(`${LEGACY_SAVE_KEY}.backup`);
+      if (backup) storage.setItem(`${SAVE_KEY}.backup`, backup);
+    }
     storage.setItem(SAVE_KEY, text);
     return storage.getItem(SAVE_KEY) === text;
   } catch { return false; }

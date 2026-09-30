@@ -1,11 +1,23 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {SAVE_KEY, TUTORIAL_KEY, timeLabel, parcelStatus, parcelPosition, advanceTime,
-  readSave, writeSave, tutorialStage, readTutorialPreference, writeTutorialPreference}
+import {SAVE_KEY, LEGACY_SAVE_KEY, TUTORIAL_KEY, timeLabel, parcelStatus, parcelPosition, advanceTime,
+  readSave, writeSave, tutorialStage, readTutorialPreference, writeTutorialPreference,
+  rewardControl}
   from '../app/game/logic.mjs';
 
 const result = {created:10, departure:100, rf_complete:200, arrival:230,
   delivered:true, on_time:true, station:'gs-sapporo', outcome:'到着'};
+
+test('reward flow can reveal computed results during replay and blocks duplicate requests', () => {
+  const report = {end_time:360};
+  assert.equal(rewardControl(null, 0).disabled, true);
+  assert.deepEqual(rewardControl(report, 0),
+    {action:'reveal', disabled:false, label:'結果を確認して報酬へ'});
+  assert.equal(rewardControl(report, 359).action, 'reveal');
+  assert.deepEqual(rewardControl(report, 360),
+    {action:'settle', disabled:false, label:'報酬を受け取って次へ'});
+  assert.equal(rewardControl(report, 360, true).disabled, true);
+});
 
 test('packet replay follows RF and backhaul boundaries from the engine', () => {
   assert.equal(parcelStatus(result, 0), '未生成');
@@ -53,6 +65,33 @@ test('storage errors do not claim a successful save', () => {
   const storage = {getItem:() => {throw Error('blocked');}, setItem:() => {throw Error('blocked');}};
   assert.equal(readSave(storage), null);
   assert.equal(writeSave(storage, {}), false);
+});
+
+test('an unchanged tab cannot replace a reward saved by another tab', () => {
+  const values = new Map();
+  const storage = {getItem:key => values.get(key) ?? null, setItem:(key, value) => values.set(key, value)};
+  const oldState = {credits:160, dispatches:2};
+  assert.equal(writeSave(storage, oldState), true);
+  const oldSnapshot = JSON.stringify(oldState);
+  assert.equal(writeSave(storage, {credits:380, dispatches:3}), true);
+  assert.equal(writeSave(storage, oldState, oldSnapshot), true);
+  assert.deepEqual(JSON.parse(readSave(storage)), {credits:380, dispatches:3});
+  assert.deepEqual(JSON.parse(storage.getItem(`${SAVE_KEY}.backup`)), oldState);
+});
+
+test('existing saves and backups migrate without old game pages rolling back rewards', () => {
+  const pending = JSON.stringify({credits:160, dispatches:2});
+  const oldBackup = JSON.stringify({credits:150, dispatches:1});
+  const values = new Map([[LEGACY_SAVE_KEY, pending], [`${LEGACY_SAVE_KEY}.backup`, oldBackup]]);
+  const storage = {getItem:key => values.get(key) ?? null, setItem:(key, value) => values.set(key, value)};
+  assert.equal(readSave(storage), pending);
+  assert.equal(writeSave(storage, JSON.parse(pending)), true);
+  assert.equal(values.get(`${SAVE_KEY}.backup`), oldBackup);
+  assert.equal(values.get(LEGACY_SAVE_KEY), pending);
+  assert.equal(writeSave(storage, {credits:380, dispatches:3}), true);
+  storage.setItem(LEGACY_SAVE_KEY, pending);
+  assert.deepEqual(JSON.parse(readSave(storage)), {credits:380, dispatches:3});
+  assert.equal(values.get(`${SAVE_KEY}.backup`), pending);
 });
 
 test('guide follows the current operation and replay result', () => {

@@ -1,12 +1,14 @@
 import {SAVE_KEY, STATION_X, timeLabel, parcelStatus, parcelPosition,
   advanceTime, readSave, writeSave, tutorialStage, readTutorialPreference,
-  writeTutorialPreference} from './logic.mjs';
+  writeTutorialPreference, rewardControl} from './logic.mjs';
 
 const root = document.getElementById('board');
 let model, args, selectedStation = 'gs-sapporo', restoreSent = false, pendingId = null;
 let storageOK = true, replayKey = null, clock = 0, playing = false, speed = 1, lastFrame = null;
 let savedNotice = '';
 let tutorial = null, guideManualStep = null, shownGuide = '';
+let lastHeight = null;
+let persistedSnapshot = null;
 const guideSteps = [
   {title:'最初の依頼を受ける', body:'「依頼手帳」の「朝の定期便」で「受注する」を押します。受注に費用はかかりません。'},
   {title:'配送方針を決める', body:'「経路の選び方」と「送る順番」を選び、「配送開始」を押します。迷ったら初期設定のままで進められます。'},
@@ -26,7 +28,10 @@ function message(type, extra = {}) {
   parent.postMessage({isStreamlitMessage:true, type, ...extra}, '*');
 }
 function fit() {
-  message('streamlit:setFrameHeight', {height: Math.ceil(root.getBoundingClientRect().height) + 5});
+  const height = Math.ceil(root.getBoundingClientRect().height) + 5;
+  if (height === lastHeight) return;
+  lastHeight = height;
+  message('streamlit:setFrameHeight', {height});
 }
 function send(action, fields = {}) {
   if (pendingId) return;
@@ -57,7 +62,7 @@ function guideMarkup() {
     </section>` : '<section id="guide-panel" hidden></section>'}`;
 }
 
-function syncGuide(force = false) {
+function syncGuide(force = false, resize = true) {
   const stage = tutorialStage(model, clock);
   const marker = `${tutorial?.open}-${guideManualStep ?? stage}-${guideManualStep === null ? 'auto' : 'manual'}`;
   if (!force && marker === shownGuide) return;
@@ -83,7 +88,7 @@ function syncGuide(force = false) {
     const current = document.getElementById('guide-current');
     if (current) current.onclick = () => {guideManualStep = null; syncGuide();};
   }
-  fit();
+  if (resize) fit();
 }
 function facilities() {
   return model.stations.map(station => {
@@ -206,7 +211,7 @@ function operations() {
         <button id="speed" class="small">${speed}×</button>
         <button id="finish" class="small">最後まで</button>
         <time id="clock">${timeLabel(clock)}</time>
-      </div><p class="guide-hint step-2">「最後まで」を押すと、結果をすぐ確認できます。</p>
+      </div><p class="guide-hint step-2">「結果を確認して報酬へ」で、再生を待たずに結果を開けます。</p>
       <div class="progress-track"><div id="progress" class="progress-fill"></div></div>
       <small>計算結果の再生です。通常速度では約36秒で進みます。</small>`}
     <div class="parcel-list">${parcelRows()}</div>
@@ -217,7 +222,7 @@ function operations() {
         <small>期限内 ${model.report.on_time}/${model.report.total}件 · 到着 ${model.report.delivered}件</small></div>
         <b>+${model.report.reward} C</b></div>
       <p class="guide-hint step-3">件数と報酬を確認してから、次へ進みます。</p>
-      <div class="actions"><button class="primary" data-action="settle" id="claim" disabled>報酬を受け取って次へ</button></div>
+      <div class="actions"><button class="primary" data-action="settle" id="claim"${disabled(pendingId)}>${rewardControl(model.report, clock).label}</button></div>
       <details><summary>配送結果と計算の記録</summary>
         ${model.report.results.map(result => `<p><b>${esc(mission.items.find(item => item.id === result.id)?.name || result.id)}</b>
           · ${esc(result.outcome)} · 到着 ${timeLabel(result.arrival)}<br>${esc(result.reason)}</p>`).join('')}
@@ -285,7 +290,8 @@ function render() {
     <p class="muted"><small>資金・報酬・開放条件はゲーム用です。医療データは架空で、優先度は説明用の分類です。
       元の経路・RF計算は画面上部の「経路シミュレーション」「通信リンク」で確認できます。</small></p>
     <div id="busy" class="busy-overlay" hidden>通信センターの記録を更新しています…</div>`;
-  bind(); syncGuide(true); updatePlayback();
+  // Notify the host only after the result and guide have their final layout.
+  bind(); updatePlayback(false); syncGuide(true, false);
   if (pendingId) {
     root.querySelectorAll('button[data-action]').forEach(button => {button.disabled = true;});
     document.getElementById('busy').hidden = false;
@@ -305,6 +311,12 @@ function bind() {
     const action = button.dataset.action;
     if (action === 'dispatch') send(action, {strategy:document.getElementById('strategy').value,
       scheduler:document.getElementById('scheduler').value});
+    else if (action === 'settle') {
+      const control = rewardControl(model.report, clock, !!pendingId);
+      if (control.disabled) return;
+      if (control.action === 'reveal') revealResults();
+      else send(action);
+    }
     else send(action, {contract_id:button.dataset.contract, station_id:selectedStation,
       equipment:button.dataset.equipment});
   }));
@@ -326,13 +338,17 @@ function bind() {
       const speeds = [.25, 1, 4, 16]; speed = speeds[(speeds.indexOf(speed) + 1) % speeds.length];
       document.getElementById('speed').textContent = `${speed}×`;
     };
-    document.getElementById('finish').onclick = () => {
-      clock = model.report.end_time; playing = false; updatePlayback(); fit();
-    };
+    document.getElementById('finish').onclick = revealResults;
   }
 }
 
-function updatePlayback() {
+function revealResults() {
+  if (!model?.report) return;
+  clock = model.report.end_time; playing = false; lastFrame = null;
+  updatePlayback(); fit();
+}
+
+function updatePlayback(refreshGuide = true) {
   if (!model?.report) return;
   const report = model.report, ended = clock >= report.end_time;
   const play = document.getElementById('play');
@@ -341,7 +357,10 @@ function updatePlayback() {
   document.getElementById('clock').textContent = timeLabel(clock);
   document.getElementById('progress').style.width = `${clock / report.end_time * 100}%`;
   document.getElementById('result-stamp').hidden = !ended;
-  document.getElementById('claim').disabled = !ended || !!pendingId;
+  const control = rewardControl(report, clock, !!pendingId);
+  const claim = document.getElementById('claim');
+  claim.disabled = control.disabled;
+  claim.textContent = control.label;
   root.querySelectorAll('.route').forEach(path => path.classList.remove('transmitting'));
   report.results.forEach((result, i) => {
     const itemIndex = model.active.items.findIndex(item => item.id === result.id);
@@ -357,13 +376,13 @@ function updatePlayback() {
       document.getElementById(pathId)?.classList.add('transmitting');
     }
   });
-  syncGuide();
+  if (refreshGuide) syncGuide();
 }
 
 function tick(now) {
   if (model?.report && playing && !pendingId) {
     if (lastFrame != null) clock = advanceTime(clock, Math.min(now - lastFrame, 300), speed, model.report.end_time);
-    if (clock >= model.report.end_time) {playing = false; fit();}
+    if (clock >= model.report.end_time) playing = false;
     updatePlayback();
   }
   lastFrame = now;
@@ -385,7 +404,10 @@ window.addEventListener('message', event => {
   }
   if (args.restore_requested) return;
   if (args.ack === pendingId) {pendingId = null; savedNotice = '';}
-  try {storageOK = writeSave(localStorage, model.state);} catch {storageOK = false;}
+  try {
+    storageOK = writeSave(localStorage, model.state, persistedSnapshot);
+    if (storageOK) persistedSnapshot = JSON.stringify(model.state);
+  } catch {storageOK = false;}
   const key = model.report ? JSON.stringify([model.active, model.state.stations]) : null;
   if (key !== replayKey) {
     replayKey = key; clock = 0; lastFrame = null; speed = 1;
