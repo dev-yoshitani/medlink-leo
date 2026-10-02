@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {SAVE_KEY,LEGACY_KEYS,readCampaign,saveCampaign,moveAllocation,assignAllocation,reorderAllocation,timeLabel,parcelStatus} from '../app/campaign/storage.mjs';
+import {SAVE_KEY,LEGACY_KEYS,readCampaign,saveCampaign,moveAllocation,assignAllocation,reorderAllocation,insertionSide,timeLabel,parcelStatus} from '../app/campaign/storage.mjs';
 function storage(){const m=new Map();return {getItem:k=>m.get(k)??null,setItem:(k,v)=>m.set(k,v)};}
 
 test('drag reordering preserves every allocation and ignores stale or identical source',()=>{
@@ -12,6 +12,15 @@ test('drag reordering preserves every allocation and ignores stale or identical 
   assert.deepEqual(reorderAllocation(plan,'c',''),plan);
   assert.deepEqual(reorderAllocation(plan,'a','a'),plan);
   assert.equal(plan[0].parcel,'a');
+});
+test('drops above and below a row move to the indicated gap in both directions',()=>{
+  const plan=['a','b','c'].map(parcel=>({parcel,contact:'x'}));
+  assert.deepEqual(reorderAllocation(plan,'a','b','after').map(a=>a.parcel),['b','a','c']);
+  assert.deepEqual(reorderAllocation(plan,'a','c','after').map(a=>a.parcel),['b','c','a']);
+  assert.deepEqual(reorderAllocation(plan,'c','a','before').map(a=>a.parcel),['c','a','b']);
+  assert.deepEqual(reorderAllocation(plan,'c','a','after').map(a=>a.parcel),['a','c','b']);
+  assert.equal(insertionSide(119,100,40),'before');
+  assert.equal(insertionSide(120,100,40),'after');
 });
 test('legacy migration preserves original and backup; new saves isolate old tabs',()=>{
   const db=storage();db.setItem(LEGACY_KEYS[0],'old');assert.equal(readCampaign(db),'old');
@@ -35,7 +44,9 @@ test('storage failure is reported, never swallowed',()=>{
 test('assignment and ordering do not mutate the live plan',()=>{
   const plan=[{parcel:'a',contact:'x'},{parcel:'b',contact:'y'}];
   assert.equal(moveAllocation(plan,'b',-1)[0].parcel,'b');assert.equal(plan[0].parcel,'a');
-  assert.deepEqual(assignAllocation(plan,'a','z'),[{parcel:'b',contact:'y'},{parcel:'a',contact:'z'}]);
+  assert.deepEqual(assignAllocation(plan,'a','z'),[{parcel:'a',contact:'z'},{parcel:'b',contact:'y'}]);
+  assert.deepEqual(assignAllocation(plan,'a','x'),plan);
+  assert.deepEqual(assignAllocation(plan,'c','z'),[...plan,{parcel:'c',contact:'z'}]);
   assert.deepEqual(assignAllocation(plan,'a',''),[{parcel:'b',contact:'y'}]);
 });
 test('replay only changes visual status',()=>{

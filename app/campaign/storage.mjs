@@ -23,18 +23,24 @@ export function moveAllocation(allocations, parcel, step) {
   return list;
 }
 export function assignAllocation(allocations, parcel, contact) {
-  const list = allocations.filter(a => a.parcel !== parcel).map(a => ({...a}));
-  if (contact) list.push({parcel, contact});
+  const list = allocations.map(a => ({...a}));
+  const index = list.findIndex(a => a.parcel === parcel);
+  if (!contact) return list.filter(a => a.parcel !== parcel);
+  if (index >= 0) list[index].contact = contact;
+  else list.push({parcel, contact});
   return list;
 }
-export function reorderAllocation(allocations, from, to) {
+export function reorderAllocation(allocations, from, to, side = 'before') {
   const list=allocations.map(a=>({...a}));
   const source=list.findIndex(a=>a.parcel===from);
   if(source<0||!list.some(a=>a.parcel===to)||from===to)return list;
   const [item]=list.splice(source,1);
   const target=list.findIndex(a=>a.parcel===to);
-  list.splice(target,0,item);
+  list.splice(target + (side === 'after' ? 1 : 0),0,item);
   return list;
+}
+export function insertionSide(y, top, height) {
+  return y < top + height / 2 ? 'before' : 'after';
 }
 export function timeLabel(seconds) {
   if (seconds === null || seconds === undefined) return '—';

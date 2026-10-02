@@ -1,5 +1,6 @@
-import {SAVE_KEY, readCampaign, saveCampaign, moveAllocation, assignAllocation, reorderAllocation,
+import {SAVE_KEY, readCampaign, saveCampaign, moveAllocation, assignAllocation,
   timeLabel, parcelStatus} from './storage.mjs';
+import {bindParcelDrag} from './drag.mjs';
 
 const root = document.getElementById('game');
 const tabs = ['通信センター','依頼手帳','配送計画','衛星・設備','研究','運用記録','練習場'];
@@ -143,10 +144,10 @@ function planning() {
   const results=new Map(model.preview.deliveries.map(d=>[d.parcel,d]));
   return `<section class="sheet"><div class="section-head"><h2>配送計画</h2>${button('自動で計画','auto',{},fixed()||!items.length)}</div>${forecast()}${timeline()}
     <div class="table-scroll"><table class="ledger"><thead><tr><th>荷物／生成時刻</th><th>容量／期限</th><th>割り当てる通信枠</th><th>予測と理由</th><th>送信順</th></tr></thead><tbody>
-    ${ordered.map(p=>{const d=results.get(p.id), a=s().plan.allocations.find(a=>a.parcel===p.id);return `<tr class="parcel" data-parcel="${p.id}" draggable="${!fixed()&&!pending&&!stale}"><td>${esc(p.title)}<br><small>${esc(p.id)}・${timeLabel(p.created)}</small></td><td>${(p.size_bytes/1e6).toFixed(2)} MB<br>${timeLabel(p.due)}</td>
+    ${ordered.map(p=>{const d=results.get(p.id), a=s().plan.allocations.find(a=>a.parcel===p.id);return `<tr class="parcel" data-parcel="${p.id}" draggable="${!fixed()&&!pending&&!stale}"><td><span class="drag-handle" title="ここをつかんで荷物を移動" aria-hidden="true">⠿</span>${esc(p.title)}<br><small>${esc(p.id)}・${timeLabel(p.created)}</small></td><td>${(p.size_bytes/1e6).toFixed(2)} MB<br>${timeLabel(p.due)}</td>
       <td><select data-assign="${p.id}" aria-label="${esc(p.id)}の通信枠"${disabled(fixed()||pending||stale)}><option value="">未割り当て</option>${model.contacts.map(c=>`<option value="${esc(c.id)}"${a?.contact===c.id?' selected':''}>${esc(c.satellite)} / ${esc(c.name)} ${timeLabel(c.start)} (${c.capacity_mb.toFixed(1)} MB / 空き${c.remaining_mb.toFixed(1)})</option>`).join('')}</select>${a?`<small>枠の最大空き ${model.contacts.find(c=>c.id===a.contact).remaining_mb.toFixed(2)} MB</small>`:''}</td>
       <td class="${d?.on_time?'good':'bad'}">${timeLabel(d?.arrival)}<br><small data-status="${p.id}">${esc(d?.reason)}</small>${d?.arrival!==null&&d?.arrival!==undefined?`<br><small>期限まで ${Math.round(p.due-d.arrival)}秒</small>`:''}</td><td><button class="mini" data-move="${p.id}" data-step="-1"${disabled(fixed()||!a||pending||stale)}>前へ</button> <button class="mini" data-move="${p.id}" data-step="1"${disabled(fixed()||!a||pending||stale)}>後ろへ</button></td></tr>`;}).join('')}</tbody></table></div>
-    ${!items.length?'<p>依頼手帳で受注すると荷物が表示されます。</p>':''}
+    ${!items.length?'<p>依頼手帳で受注すると荷物が表示されます。</p>':'<p class="muted">左の⠿をつかんで移動します。行の上半分はその前、下半分はその後へ入ります。挿入位置に金色の線が出ます。通信枠を変更しても送信順は保ちます。</p>'}
     <div class="actions">${[0,1].map(i=>`${button(`案${i+1}を保存`,'compare_save',{slot:i},fixed()||!items.length)}${button(`案${i+1}を使う`,'compare_load',{slot:i},fixed()||!s().comparisons[i])}`).join('')}</div>
     ${model.comparisons.map((r,i)=>`<p>案${i+1}：期限内${r.on_time}/${r.total}件・利益${money(r.profit)} C</p>`).join('')}${dayActions()}${replayMarkup()}</section>`;
 }
@@ -196,31 +197,9 @@ function bind() {
   root.querySelectorAll('[data-station]').forEach(el=>{el.onclick=()=>{selected=el.dataset.station;render();};el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();el.click();}};});
   root.querySelectorAll('[data-assign]').forEach(el=>el.onchange=()=>send('plan',{allocations:assignAllocation(s().plan.allocations,el.dataset.assign,el.value)}));
   root.querySelectorAll('[data-move]').forEach(el=>el.onclick=()=>send('plan',{allocations:moveAllocation(s().plan.allocations,el.dataset.move,Number(el.dataset.step))}));
-  root.querySelectorAll('.parcel[draggable=true]').forEach(el=>{el.ondragstart=e=>e.dataTransfer.setData('text/plain',el.dataset.parcel);el.ondragover=e=>e.preventDefault();el.ondrop=e=>{e.preventDefault();send('plan',{allocations:reorderAllocation(s().plan.allocations,e.dataTransfer.getData('text/plain'),el.dataset.parcel)});};
-    // Touch/pen dragging needs explicit capture so the page doesn't pan instead.
-    el.onpointerdown=e=>{
-      if(e.pointerType==='mouse'||e.target.closest('button,select,input')||pending||stale||fixed())return;
-      const x=e.clientX,y=e.clientY,revision=s().revision;let moved=false,target=null;
-      el.setPointerCapture(e.pointerId);
-      el.onpointermove=move=>{
-        if(Math.hypot(move.clientX-x,move.clientY-y)<8&&!moved)return;
-        moved=true;move.preventDefault();el.classList.add('dragging');
-        if(target)target.classList.remove('drop-target');
-        target=document.elementFromPoint(move.clientX,move.clientY)?.closest('[data-contact],.parcel');
-        if(target&&target!==el)target.classList.add('drop-target');
-      };
-      const finish=up=>{
-        el.classList.remove('dragging');if(target)target.classList.remove('drop-target');
-        el.onpointermove=null;el.onpointerup=null;el.onpointercancel=null;
-        if(el.hasPointerCapture(up.pointerId))el.releasePointerCapture(up.pointerId);
-        if(up.type==='pointercancel'||!moved||!target||target===el||pending||stale||fixed()||revision!==s().revision)return;
-        const allocations=target.dataset.contact?assignAllocation(s().plan.allocations,el.dataset.parcel,target.dataset.contact):reorderAllocation(s().plan.allocations,el.dataset.parcel,target.dataset.parcel);
-        send('plan',{allocations});
-      };
-      el.onpointerup=finish;el.onpointercancel=finish;
-    };
-  });
-  root.querySelectorAll('[data-contact]').forEach(el=>{el.onclick=()=>{const items=model.contracts.filter(c=>s().accepted.includes(c.id)).flatMap(c=>c.parcels);const p=items.find(p=>!s().plan.allocations.some(a=>a.parcel===p.id));if(p)send('plan',{allocations:assignAllocation(s().plan.allocations,p.id,el.dataset.contact)});};el.ondragover=e=>e.preventDefault();el.ondrop=e=>{e.preventDefault();send('plan',{allocations:assignAllocation(s().plan.allocations,e.dataTransfer.getData('text/plain'),el.dataset.contact)});};});
+  bindParcelDrag(root,{getPlan:()=>s().plan.allocations,getRevision:()=>s().revision,
+    canEdit:()=>!pending&&!stale&&!fixed(),onPlan:allocations=>send('plan',{allocations})});
+  root.querySelectorAll('[data-contact]').forEach(el=>{el.onclick=()=>{const items=model.contracts.filter(c=>s().accepted.includes(c.id)).flatMap(c=>c.parcels);const p=items.find(p=>!s().plan.allocations.some(a=>a.parcel===p.id));if(p)send('plan',{allocations:assignAllocation(s().plan.allocations,p.id,el.dataset.contact)});};});
   const click=(id,fn)=>{const el=document.getElementById(id);if(el)el.onclick=fn;};
   const kindSelect=document.getElementById('buy-kind');if(kindSelect)kindSelect.onchange=()=>{buyKind=kindSelect.value;render();};
   click('buy',()=>send('buy',{kind:document.getElementById('buy-kind').value,orbit:document.getElementById('buy-orbit').value}));
