@@ -9,7 +9,7 @@ from typing import Any
 
 import pandas as pd
 import streamlit as st
-from game_ui import render_game
+from campaign_ui import render_campaign as render_game
 from mission_scene import build_scene
 from ui_labels import (
     DATA_LABELS,
@@ -593,7 +593,7 @@ st.markdown(
 )
 
 st.title("MedLink-LEO")
-st.caption("衛星通信で医療データを届ける経路を試す")
+st.caption("小さな通信センターから、衛星通信網を育てよう")
 st.markdown(
     '<div class="safety-strip"><strong>利用上の注意</strong>'
     f'<span>{escape(SAFETY_NOTICE)}</span></div>',
@@ -622,10 +622,10 @@ with st.expander("計算の前提と利用上の注意"):
 - {SAFETY_NOTICE}
 - 優先度はシミュレーション用の分類であり、臨床上の判断基準ではありません。
 - TLEは過去の保存済みデータで、その基準時刻付近を計算しています。現在の衛星位置ではありません。
-- 経路モデルは衛星1機、地上局3か所、病院側の中継点1か所です。
+- 経路シミュレーションは衛星1機・地上局3か所です。ゲームは架空の円軌道と最大6機・6拠点を扱います。
 - データは生成時点で衛星上にあると仮定し、診療所から衛星への送信は省略しています。
 - 1件の配送には1回の通信機会を使います。完全なDTN/BPv7、通信機会の分割、
-  複数衛星の経路選択は実装していません。
+  衛星間中継は含みません。ゲームの複数衛星運用は、過去TLEの解析とは別の簡略モデルです。
 - 通信容量は1秒刻みの中点サンプリングと、文書化したRFモデルで計算しています。
 - プロトコルの追加データ、再送、フェージング、干渉、適応符号化は含めていません。
 """

@@ -37,14 +37,36 @@ def main() -> int:
                 startup = subprocess.STARTUPINFO()
                 startup.dwFlags |= subprocess.STARTF_USESHOWWINDOW
                 startup.wShowWindow = 0
-                options = {"startupinfo": startup,
-                           "creationflags": subprocess.CREATE_NEW_PROCESS_GROUP}
+                options = {
+                    "startupinfo": startup,
+                    "creationflags": (
+                        subprocess.CREATE_NEW_PROCESS_GROUP
+                        | subprocess.DETACHED_PROCESS
+                        | subprocess.CREATE_BREAKAWAY_FROM_JOB
+                    ),
+                }
             with (logs / "game-launch.log").open("a", encoding="utf-8") as log:
                 process = subprocess.Popen(
-                    [sys.executable, "-m", "streamlit", "run", "app/streamlit_app.py",
-                     "--server.headless", "true", "--server.address", "127.0.0.1",
-                     "--server.port", "8502", "--browser.gatherUsageStats", "false"],
-                    cwd=ROOT, stdin=subprocess.DEVNULL, stdout=log, stderr=log, **options,
+                    [
+                        sys.executable,
+                        "-m",
+                        "streamlit",
+                        "run",
+                        "app/streamlit_app.py",
+                        "--server.headless",
+                        "true",
+                        "--server.address",
+                        "127.0.0.1",
+                        "--server.port",
+                        "8502",
+                        "--browser.gatherUsageStats",
+                        "false",
+                    ],
+                    cwd=ROOT,
+                    stdin=subprocess.DEVNULL,
+                    stdout=log,
+                    stderr=log,
+                    **options,
                 )
                 deadline = time.monotonic() + 45
                 while not ready():
@@ -52,7 +74,7 @@ def main() -> int:
                         raise RuntimeError(
                             "起動に失敗しました。outputs/preview/game-launch.logを確認してください。"
                         )
-                    time.sleep(.25)
+                    time.sleep(0.25)
         if not args.no_browser:
             webbrowser.open(URL)
         print(URL)

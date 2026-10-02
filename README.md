@@ -119,16 +119,17 @@ simulator; it does not duplicate orbital or RF equations. See
 
 ### 日本語の運用・育成ゲーム
 
-このブランチでは **通信センター** が最初に開きます。依頼を受け、衛星から地上局へ
-データを届けて報酬を受け取り、アンテナと地上回線を育てる2Dゲームです。
-札幌から始め、運用実績と資金でソウル・東京を開放できます。5種類の依頼を繰り返せて、
-進行はブラウザーに自動保存されます。荷物の移動は実際の計算結果を再生し、
-一時停止・速度変更・最後まで進める操作ができます。
+このローカルブランチでは **通信センター** が最初に開きます。毎朝6件の依頼から仕事を選び、
+荷物の送信順と通信枠を計画する2D経営ゲームです。利益で衛星・地上局を購入し、研究を進めます。
+最大6機・6拠点、全4章と無期限運営に対応します。各章3つの練習課題では、本番の資金を使わず
+計画を比較できます。進行はブラウザーに保存し、旧ゲームのセーブも引き継げます。
 
 Windowsでこの作業環境を使う場合は、**[Start-Game.bat](Start-Game.bat) をダブルクリック**してください。
 `http://127.0.0.1:8502/` で開きます。閉じた後も同じファイルから再開できます。
 初めて環境を用意する場合の手順、設備の効果、セーブの保管方法は [遊び方](docs/game.md) にあります。
-アンテナの利得と地上回線の遅延を既存の計算に渡すため、強化は通信容量・病院への到着時間に反映されます。
+ゲームは架空の円軌道と既存のRF計算を使い、衛星と地上局の占有時間を管理します。
+過去のTLEを使う工学解析画面も利用できます。全面更新の仕様は [設計書](docs/game-update-design.md) にあります。
+このゲーム更新はローカルの実装であり、上記の公開デモへの反映は含みません。
 
 ### Engineering screens
 
@@ -281,8 +282,9 @@ src/medlink/simulation/    fixed/intermittent transfer and shared capacity integ
 src/medlink/orbit/         frozen TLE, SGP4, station visibility
 src/medlink/link/          RF equations and effective-rate abstraction
 app/                       Streamlit presentation layer
-app/game/                  Japanese 2D campaign UI and replay
-src/medlink/game.py         Campaign rules using the existing routing engine
+app/campaign/              Japanese 2D management game and replay
+src/medlink/campaign/       Multi-satellite game rules, synthetic orbit model and saves
+src/medlink/game.py         Version-one campaign rules retained for save migration
 examples/                  synthetic v1.0 and v1.1 scenarios
 experiments/               independent scheduler and routing benchmark configs
 docs/assets/               small generated evidence committed for review

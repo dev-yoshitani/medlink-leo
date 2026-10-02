@@ -7,9 +7,44 @@ from streamlit.testing.v1 import AppTest
 
 from app.mission_scene import ASSET_DIR, build_scene
 from app.ui_labels import ROUTING_LABELS, STATION_LABELS
-from medlink.game import GameState, accept_contract, dispatch
+from medlink.campaign import CampaignState, begin_day, commit_day
+from medlink.campaign.service import accept
 from medlink.routing import compare_routing_strategies
 from medlink.scenarios import load_scenario
+
+
+def test_campaign_transport_restores_before_accepting_commands_after_session_loss(monkeypatch):
+    import importlib
+
+    app_path = Path(__file__).resolve().parents[1] / "app" / "streamlit_app.py"
+    monkeypatch.syspath_prepend(str(app_path.parent))
+    campaign_ui = importlib.import_module("campaign_ui")
+
+    event = [{"id": "lost-session", "revision": 0, "action": "accept", "contract": "d1-regular"}]
+    monkeypatch.setattr(campaign_ui, "BOARD", lambda **kwargs: event[0])
+    app = AppTest.from_file(str(app_path), default_timeout=30).run()
+    assert not app.exception
+    assert not app.session_state.fleet_restored
+    assert app.session_state.fleet_error
+    assert app.session_state.fleet_state.accepted == ()
+    saved = begin_day(CampaignState(credits=770, revision=18))
+    event[0] = {"id": "restore-session", "action": "restore", "save": saved.to_dict()}
+    app.run()
+    assert app.session_state.fleet_restored
+    assert app.session_state.fleet_state == saved
+    assert not app.session_state.fleet_error
+
+
+def test_purchase_comparisons_use_selected_type_and_daily_event():
+    from app.campaign_ui import board_model
+
+    state = begin_day(CampaignState(day=4))
+    comparisons = board_model(state)["orbit_comparisons"]
+    assert len(comparisons) == 9
+    small = next(c for c in comparisons if c["kind"] == "small" and c["id"] == "early")
+    power = next(c for c in comparisons if c["kind"] == "power" and c["id"] == "early")
+    assert power["capacity_mb"] > small["capacity_mb"]
+    assert small["overlap"] == 1
 
 
 def test_mission_scene_uses_bundled_vectors_and_actual_selected_route() -> None:
@@ -24,9 +59,7 @@ def test_mission_scene_uses_bundled_vectors_and_actual_selected_route() -> None:
         ElementTree.parse(ASSET_DIR / f"{name}.svg")
 
     scenario_path = (
-        Path(__file__).resolve().parents[1]
-        / "examples"
-        / "contact_plan_medical_routing.json"
+        Path(__file__).resolve().parents[1] / "examples" / "contact_plan_medical_routing.json"
     )
     comparison = compare_routing_strategies(load_scenario(scenario_path))
     result = next(result for result in comparison.reports[0].results if result.delivered)
@@ -56,15 +89,11 @@ def test_default_streamlit_routing_demo_runs_offline() -> None:
     assert any("計算完了" in mark.value for mark in app.markdown)
     assert any(header.value == "結果を振り返る" for header in app.subheader)
     comparison = next(
-        frame.value
-        for frame in app.dataframe
-        if "経路の選び方" in frame.value.columns
+        frame.value for frame in app.dataframe if "経路の選び方" in frame.value.columns
     )
     assert comparison["経路の選び方"].tolist() == list(ROUTING_LABELS.values())
     station_comparison = next(
-        frame.value
-        for frame in app.dataframe
-        if "接触開始（秒）" in frame.value.columns
+        frame.value for frame in app.dataframe if "接触開始（秒）" in frame.value.columns
     )
     assert list(station_comparison.columns) == [
         "地上局",
@@ -116,10 +145,8 @@ def test_existing_simulation_mode_remains_available() -> None:
 def test_campaign_save_and_report_controls_render_for_resumed_delivery() -> None:
     app_path = Path(__file__).resolve().parents[1] / "app" / "streamlit_app.py"
     app = AppTest.from_file(str(app_path), default_timeout=30).run()
-    app.session_state["campaign_state"] = dispatch(
-        accept_contract(GameState(), "morning"), "deadline-aware", "edf",
-    )
-    app.session_state["campaign_restored"] = True
+    app.session_state["fleet_state"] = commit_day(accept(begin_day(CampaignState()), "d1-regular"))
+    app.session_state["fleet_restored"] = True
     app.run(timeout=30)
 
     assert not app.exception
