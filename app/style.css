@@ -4,9 +4,11 @@
     color: #263b42;
     font-family: "Yu Gothic UI", "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
 }
-.block-container {max-width: 1080px; padding-top: 1.1rem; padding-bottom: 4rem;}
+.block-container {max-width: 1080px; padding-top: 1.1rem; padding-bottom: 4rem; overflow-anchor: none;}
 h1, h2, h3 {color: #263b42; letter-spacing: -.025em;}
-h1 {font-size: 2.15rem; font-weight: 800;}
+h1 {font-size: 1.35rem; font-weight: 800;}
+h1#med-link-leo {font-size: 1.35rem; padding: 0; margin: 0;}
+.stApp iframe {scroll-margin-top: 65px;}
 h2 {font-size: 1.7rem; margin-bottom: .2rem;}
 h3 {font-size: 1.35rem; margin-top: 2.2rem;}
 a {color: #236a65;}

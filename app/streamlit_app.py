@@ -593,22 +593,15 @@ st.markdown(
 )
 
 st.title("MedLink-LEO")
-st.caption("小さな通信センターから、衛星通信網を育てよう")
-st.markdown(
-    '<div class="safety-strip"><strong>利用上の注意</strong>'
-    f'<span>{escape(SAFETY_NOTICE)}</span></div>',
-    unsafe_allow_html=True,
-)
-st.markdown(
-    "[ソースコードと設計資料](https://github.com/dev-yoshitani/medlink-leo)"
-)
-
-mode = st.radio(
-    "見る画面",
-    options=("通信センター", "経路シミュレーション", "通信リンク"),
-    horizontal=True,
-    key="demo_mode",
-)
+with st.sidebar:
+    st.header("ゲーム・解析ツール")
+    mode = st.radio(
+        "見る画面",
+        options=("通信センター", "経路シミュレーション", "通信リンク"),
+        key="demo_mode",
+    )
+    st.caption(SAFETY_NOTICE)
+    st.markdown("[ソースコードと設計資料](https://github.com/dev-yoshitani/medlink-leo)")
 if mode == "通信センター":
     render_game()
 elif mode == "経路シミュレーション":

@@ -2,13 +2,15 @@ import {SAVE_KEY, readCampaign, saveCampaign, moveAllocation, assignAllocation,
   timeLabel, parcelStatus} from './storage.mjs';
 import {bindParcelDrag} from './drag.mjs';
 import {campaignMap, sceneCoords, satelliteX} from './scene.mjs';
+import {dayFlow} from './workflow.mjs';
 
 const root = document.getElementById('game');
 const tabs = ['通信センター','依頼手帳','配送計画','衛星・設備','研究','運用記録','練習場'];
-let model, args, tab = 0, selected = 'gs-sapporo', pending = null, unlockPending = null;
+let model, args, tab = 0, selected = 'gs-sapporo', pending = null, unlockPending = null, pendingAction = null;
 let restored = false, expectedSave = null, stale = false, storageOK = true, storageError = '';
 let replayId = null, clock = 0, playing = false, speed = 1, lastFrame = null;
-let lastHeight = null, manualGuide = null, buyKind = 'small';
+let lastHeight = null, manualGuide = null, buyKind = 'small', helpOpen = false, focusNext = false;
+const openPanels = new Set();
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money = n => Number(n).toLocaleString('ja-JP');
 const disabled = yes => yes ? ' disabled' : '';
@@ -32,6 +34,7 @@ async function send(action, fields = {}) {
       if(storageOK && !['restore','reset'].includes(action) && localStorage.getItem(SAVE_KEY)!==expectedSave)
         throw new Error('別の画面で進行が変わりました。「最新の記録を読み込む」で再開してください。');
       pending = crypto.randomUUID();
+      pendingAction = action;
       render();
       const completion = new Promise(resolve => {unlockPending = resolve;});
       message('streamlit:setComponentValue',{value:{id:pending,action,revision:s().revision,...fields},dataType:'json'});
@@ -47,9 +50,17 @@ async function send(action, fields = {}) {
   }
 }
 function forecast(report = model.preview) {
-  return `<div class="forecast"><div><small>${fixed()?'今日の結果':'配送見込み'}</small><b>${report.on_time} / ${report.total} 件</b></div>
+  if(!s().accepted.length&&!fixed())return '<p class="empty-note">依頼を受注すると、配送の見込みと利益が表示されます。</p>';
+  return `<div class="forecast"><div><small>${fixed()?'期限内に届いた荷物':'期限内に届く荷物'}</small><b>${report.on_time} / ${report.total} 件</b></div>
     <div><small>配送報酬・ボーナス</small><b>${money(report.revenue)} C</b></div><div><small>維持費・未達費用</small><b>${money(report.upkeep+report.penalty)} C</b></div>
     <div><small>差引利益</small><b class="${report.profit<0?'bad':'good'}">${report.profit>=0?'+':''}${money(report.profit)} C</b></div></div>`;
+}
+function workflow() {
+  const next=dayFlow(s(),model.contracts,tab);
+  const steps=[['依頼を選ぶ',1,`${s().accepted.length}件受注`],['配送を計画する',2,`${next.total-next.remaining} / ${next.total}件設定`],['報酬を受け取る',5,claimed()?'受領済み':fixed()?'受け取れます':'運用後に受領']];
+  const cta=next.action?button(next.label,next.action,next.fields??{},false,true):`<button data-tab="${next.tab}" class="primary"${disabled(pending||stale)}>${next.label} →</button>`;
+  return `<section class="workflow" aria-label="今日の進め方"><ol class="flow-steps">${steps.map(([label,destination,status],i)=>`<li class="${next.phase>i?'complete':next.phase===i?'current':''}"><button data-tab="${destination}"${next.phase===i?' aria-current="step"':''}><span class="step-number">${next.phase>i?'✓':i+1}</span><span><strong>${label}</strong><small>${status}</small></span></button></li>`).join('')}</ol>
+    <div class="next-operation"><div><small>次の操作</small><h2>${next.title}</h2><p>${next.body}</p></div>${cta}</div></section>`;
 }
 function guide() {
   const guides = [
@@ -85,8 +96,9 @@ function guide() {
 function mapMarkup() {return campaignMap(model,selected,fixed());}
 function facilityMarkup(id=selected) {
   const f=model.stations.find(f=>f.id===id), live=f.facility;
+  const blockedNote=investBlocked()?`<p class="lock-note">${fixed()?'報酬を受け取ると設備を変更できます。':'受注中は設備を変更できません。今日の報酬を受け取った後に強化できます。'}</p>`:'';
   if(!live) return `<section class="sheet"><img class="facility-art" src="${model.assets.ground_station}" alt="${esc(f.name)}の地上局"/><h2>${esc(f.name)}の通信拠点</h2><p>新しい場所から衛星を受けられます。回線の基本遅延は${f.delay}秒です。</p><p>開放費用 ${money(f.cost)} C・第${f.chapter}章</p>${button('拠点を開く','unlock',{asset:f.id},investBlocked()||s().chapter<f.chapter||s().credits<f.cost,true)}</section>`;
-  return `<section class="sheet"><img class="facility-art" src="${model.assets.ground_station}" alt="${esc(f.name)}の地上局"/><h2>${esc(f.name)}の設備</h2><p>${live.active?'稼働中':'休止中'}・受信${live.receivers}台</p>
+  return `<section class="sheet"><img class="facility-art" src="${model.assets.ground_station}" alt="${esc(f.name)}の地上局"/><h2>${esc(f.name)}の設備</h2><p>${live.active?'稼働中':'休止中'}・受信${live.receivers}台</p>${blockedNote}
     ${['antenna','backhaul','receivers'].map((type,i)=>{const n=live[type], cost=type==='receivers'?300*n:100*n*n;
       const limit=type==='antenna'?(s().research[0]>=3?5:3):type==='backhaul'?2+s().research[1]:1+Math.min(2,s().research[0]);
       return `<h3>${['受信アンテナ','地上回線','受信設備'][i]} Lv.${n}</h3><div class="level">${'●'.repeat(n)}${'○'.repeat(Math.max(0,5-n))}</div><p>${['送れる量を増やす','病院への到着を早める','同時に受ける衛星を増やす'][i]}</p><div class="actions">${button(n>=limit?'研究で上限を開放':`強化 ${money(cost)} C`,'upgrade',{asset:id,equipment:type},investBlocked()||n>=limit||s().credits<cost||(type==='receivers'&&s().chapter<3))}</div>`;}).join('')}
@@ -101,13 +113,14 @@ function dayActions() {
   return `<div class="actions">${!fixed()?button('運用開始','commit',{},!s().accepted.length,true):claimed()?`${button('翌日へ進む','next',{},false,true)}<span class="good">報酬は受領済み</span>`:button('報酬を受け取る','claim',{settlement:s().report.id},false,true)}</div>`;
 }
 function center() {
-  return `<div class="layout scene-layout"><div>${mapMarkup()}${replayMarkup()}${forecast()}${dayActions()}</div><aside class="side"><section class="sheet"><h2>${esc(s().book.event_title)}</h2><p>${esc(s().book.event_body)}</p>${s().book.recovery?'<p class="bad">復旧モード：基本衛星と札幌局で再開します。追加設備を休止し、維持費を免除します。100 C以上で通常運営へ戻れます。追加設備は設備画面から再開できます。</p>':''}<p>今日の維持費 ${s().book.upkeep} C</p><h3>今日の課題：${esc(model.daily_challenge.title)}</h3><p>${esc(model.daily_challenge.body)}</p>${button("練習で試す","exercise",{exercise:model.daily_challenge.id})}<div class="actions"><button data-tab="1">依頼を選ぶ</button><button data-tab="2">配送計画へ</button></div></section>${facilityMarkup()}</aside></div>`;
+  const f=model.stations.find(f=>f.id===selected), live=f.facility;
+  return `<div class="layout scene-layout"><div>${mapMarkup()}<section class="facility-overview"><img src="${model.assets.ground_station}" alt=""><div><h3>${esc(f.name)}の通信拠点</h3><p>${live?`${live.active?'稼働中':'休止中'}・アンテナLv.${live.antenna}・回線Lv.${live.backhaul}`:`第${f.chapter}章で開放・${money(f.cost)} C`}</p></div><button data-tab="3">設備を見る →</button></section>${forecast()}${replayMarkup()}</div><aside class="side"><section class="sheet"><h2>今日の運用条件</h2><strong>${esc(s().book.event_title)}</strong><p>${esc(s().book.event_body)}</p>${s().book.recovery?'<p class="bad">復旧モード：基本衛星と札幌局で再開します。100 C以上で通常運営へ戻れます。追加設備は設備画面から再開できます。</p>':''}<p>維持費 ${s().book.upkeep} C / 日</p></section><section class="sheet"><h2>練習してみる</h2><p>${esc(model.daily_challenge.title)}</p><p class="muted">${esc(model.daily_challenge.body)}</p>${button("練習場を開く","exercise",{exercise:model.daily_challenge.id})}</section></aside></div>`;
 }
 function offers() {
   return `<section class="sheet"><div class="section-head"><h2>今日の依頼手帳</h2><span>受注 ${s().accepted.length} / ${3+s().research[2]}件</span></div><p class="muted">受ける依頼を組み合わせます。未達費用と必要な期限内件数を確認してください。</p>${forecast()}
     <div class="offers">${model.contracts.map(c=>{const accepted=s().accepted.includes(c.id), ongoing=s().ongoing.some(o=>o.id===c.id);return `<article class="offer ${accepted?'accepted':''}"><header><img class="offer-parcel" src="${model.assets.parcel}" alt=""/><h3>${esc(c.title)}</h3><span class="tag">${c.days_left>1?`${c.days_left}日契約`:accepted?'受注中':'今日の依頼'}</span></header>
-      <p>荷物${c.parcels.length}件・合計${(c.parcels.reduce((n,p)=>n+p.size_bytes,0)/1e6).toFixed(2)} MB<br>期限 ${timeLabel(Math.min(...c.parcels.map(p=>p.due)))} / 達成条件 ${c.target}件<br>期限内1件 ${c.payment} C＋達成 ${c.bonus} C<br>未達費用 ${c.penalty} C</p>
-      ${c.lock?`<p class="muted">${esc(c.lock)}</p>`:''}${ongoing?'<p>継続中：今日の決算まで続きます。</p>':button(accepted?'受注を取り消す':'受注する',accepted?'cancel':'accept',{contract:c.id},fixed()||(!accepted&&(!!c.lock||s().accepted.length>=3+s().research[2])),!accepted&&!c.lock)}</article>`;}).join('')}</div>${dayActions()}<button data-tab="2">配送計画を組む →</button></section>`;
+      ${c.kind==='regular'?'<span class="beginner-tag">はじめて向け</span>':''}<div class="offer-facts"><div><small>配送期限</small><strong>${timeLabel(Math.min(...c.parcels.map(p=>p.due)))}</strong></div><div><small>全件成功時の報酬</small><strong>${money(c.parcels.length*c.payment+c.bonus)} C</strong></div></div><p>荷物 ${c.parcels.length}件 / 合計 ${(c.parcels.reduce((n,p)=>n+p.size_bytes,0)/1e6).toFixed(2)} MB<br>達成条件：${c.target}件を期限内に届ける</p><details class="offer-terms"><summary>報酬の内訳・未達時の費用</summary><p>期限内1件 ${c.payment} C＋達成 ${c.bonus} C<br>未達費用 ${c.penalty} C</p></details>
+      ${c.lock?`<p class="muted">${esc(c.lock)}</p>`:''}${ongoing?'<p>継続中：今日の決算まで続きます。</p>':button(accepted?'受注を取り消す':'受注する',accepted?'cancel':'accept',{contract:c.id},fixed()||(!accepted&&(!!c.lock||s().accepted.length>=3+s().research[2])),!accepted&&!c.lock)}</article>`;}).join('')}</div>${fixed()?dayActions():`<button data-tab="2" class="primary"${disabled(!s().accepted.length)}>配送計画を作る →</button>`}</section>`;
 }
 function timeline() {
   const lanes = [...new Set(model.contacts.map(c=>`${c.satellite}|${c.station}`))];
@@ -120,14 +133,14 @@ function planning() {
   const items=model.contracts.filter(c=>s().accepted.includes(c.id)).flatMap(c=>c.parcels.map(p=>({...p,title:c.title})));
   const ordered=[...s().plan.allocations.map(a=>items.find(p=>p.id===a.parcel)),...items.filter(p=>!s().plan.allocations.some(a=>a.parcel===p.id))].filter(Boolean);
   const results=new Map(model.preview.deliveries.map(d=>[d.parcel,d]));
-  return `<section class="sheet"><div class="section-head"><h2>配送計画</h2>${button('自動で計画','auto',{},fixed()||!items.length)}</div>${forecast()}${timeline()}
+  return `<section class="sheet"><div class="section-head"><h2>配送計画</h2>${button('自動で計画','auto',{},fixed()||!items.length)}</div><p class="muted">まず自動で計画し、到着の予測を確認します。通信枠や送信順は表で調整できます。</p>${forecast()}<details class="advanced"><summary>通信できる時間を見る・ドラッグで割り当てる</summary>${timeline()}</details>
     <div class="table-scroll"><table class="ledger"><thead><tr><th>荷物／生成時刻</th><th>容量／期限</th><th>割り当てる通信枠</th><th>予測と理由</th><th>送信順</th></tr></thead><tbody>
     ${ordered.map(p=>{const d=results.get(p.id), a=s().plan.allocations.find(a=>a.parcel===p.id);return `<tr class="parcel" data-parcel="${p.id}" draggable="${!fixed()&&!pending&&!stale}"><td><span class="drag-handle" title="ここをつかんで荷物を移動" aria-hidden="true">⠿</span>${esc(p.title)}<br><small>${esc(p.id)}・${timeLabel(p.created)}</small></td><td>${(p.size_bytes/1e6).toFixed(2)} MB<br>${timeLabel(p.due)}</td>
       <td><select data-assign="${p.id}" aria-label="${esc(p.id)}の通信枠"${disabled(fixed()||pending||stale)}><option value="">未割り当て</option>${model.contacts.map(c=>`<option value="${esc(c.id)}"${a?.contact===c.id?' selected':''}>${esc(c.satellite)} / ${esc(c.name)} ${timeLabel(c.start)} (${c.capacity_mb.toFixed(1)} MB / 空き${c.remaining_mb.toFixed(1)})</option>`).join('')}</select>${a?`<small>枠の最大空き ${model.contacts.find(c=>c.id===a.contact).remaining_mb.toFixed(2)} MB</small>`:''}</td>
       <td class="${d?.on_time?'good':'bad'}">${timeLabel(d?.arrival)}<br><small data-status="${p.id}">${esc(d?.reason)}</small>${d?.arrival!==null&&d?.arrival!==undefined?`<br><small>期限まで ${Math.round(p.due-d.arrival)}秒</small>`:''}</td><td><button class="mini" data-move="${p.id}" data-step="-1"${disabled(fixed()||!a||pending||stale)}>前へ</button> <button class="mini" data-move="${p.id}" data-step="1"${disabled(fixed()||!a||pending||stale)}>後ろへ</button></td></tr>`;}).join('')}</tbody></table></div>
     ${!items.length?'<p>依頼手帳で受注すると荷物が表示されます。</p>':'<p class="muted">左の⠿をつかんで移動します。行の上半分はその前、下半分はその後へ入ります。挿入位置に金色の線が出ます。通信枠を変更しても送信順は保ちます。</p>'}
-    <div class="actions">${[0,1].map(i=>`${button(`案${i+1}を保存`,'compare_save',{slot:i},fixed()||!items.length)}${button(`案${i+1}を使う`,'compare_load',{slot:i},fixed()||!s().comparisons[i])}`).join('')}</div>
-    ${model.comparisons.map((r,i)=>`<p>案${i+1}：期限内${r.on_time}/${r.total}件・利益${money(r.profit)} C</p>`).join('')}${dayActions()}${replayMarkup()}</section>`;
+    <details class="advanced"><summary>2つの計画を保存して比べる</summary><div class="actions">${[0,1].map(i=>`${button(`案${i+1}を保存`,'compare_save',{slot:i},fixed()||!items.length)}${button(`案${i+1}を使う`,'compare_load',{slot:i},fixed()||!s().comparisons[i])}`).join('')}</div>
+    ${model.comparisons.map((r,i)=>`<p>案${i+1}：期限内${r.on_time}/${r.total}件・利益${money(r.profit)} C</p>`).join('')}</details>${dayActions()}${replayMarkup()}</section>`;
 }
 function fleet() {
   return `<section class="sheet"><h2>衛星を育てる</h2><p class="muted">設備を変更できるのは受注前と決算後です。維持費と通信時間の重なりを比べましょう。</p>
@@ -160,15 +173,32 @@ function render() {
   root.dataset.revision = s().revision;
   root.dataset.ack = args.ack ?? '';
   root.innerHTML=`${pending?'<div class="busy" role="status">記録しています…</div>':''}<header class="masthead"><div><small class="eyebrow">MEDLINK 通信センター</small><h1>${s().chapter===5?'':`第${s().chapter}章 `}${esc(model.title)}</h1></div><div class="stats"><div><small>営業日</small><b>${s().day}日目</b></div><div><small>運用資金</small><b>${money(s().credits)} C</b></div><div><small>信用</small><b>${s().credit}</b></div><div><small>研究ポイント</small><b>${s().points}</b></div></div></header>
-    <div class="goals">${model.goals.map(([name,value,goal])=>`<span class="goal ${value>=goal?'done':''}">${esc(name)} ${value} / ${goal}</span>`).join('')}${s().chapter<5?button('次の章へ','chapter',{},model.goals.some(([,v,g])=>v<g)):''}</div>
-    ${args.notice||storageError?`<div class="notice" role="status">${esc(storageError||args.notice)}</div>`:''}${stale?'<div class="notice">記録を保護するため編集を止めています。下の「最新の記録を読み込む」を使ってください。</div>':''}
-    ${guide()}<nav class="nav" aria-label="ゲーム画面">${tabs.map((label,i)=>`<button data-tab="${i}" class="${tab===i?'selected':''}" aria-current="${tab===i?'page':'false'}">${label}</button>`).join('')}</nav>
-    ${[center,offers,planning,fleet,research,records,practice][tab]()}<footer class="foot">架空の医療データを使った1人用ゲームです。衛星間中継・診療所からの送信は省略しています。ゲームの円軌道モデルは、経路シミュレーションの過去TLE解析と異なります。
-    <div class="storage-controls"><button id="export">セーブをファイルに保管</button><button id="reload-save">最新の記録を読み込む</button><button id="backup">前のセーブへ戻す</button>${args.pending_import?'<button id="import-save" class="primary">読み込みを確定</button>':''}${stale?'<button id="raw-save">保護した記録を書き出す</button>':''}</div>${storageOK?'<p>このURLのブラウザーへ自動保存しています。</p>':'<p class="bad">自動保存を使えません。閉じる前にセーブをファイルへ保管してください。</p>'}</footer>`;
-  bind();paintReplay();requestAnimationFrame(fit);
+    ${args.notice||storageError?`<div class="${storageError||args.error?'notice':'save-notice'}" role="status">${esc(storageError||args.notice)}</div>`:''}${stale?'<div class="notice">記録を保護するため編集を止めています。<button id="stale-reload">最新の記録を読み込む</button></div>':''}
+    ${workflow()}<nav class="nav" aria-label="ゲーム画面">${tabs.map((label,i)=>`<button data-tab="${i}" class="${tab===i?'selected':''}" aria-current="${tab===i?'page':'false'}">${i===1?'依頼':i===3?'設備':i===5?'結果・記録':label}</button>`).join('')}</nav>
+    <details class="help-panel"${helpOpen?' open':''}><summary>遊び方・操作ガイド</summary>${guide()}<p>Cはゲーム内の通貨です。運用後の「差引利益」が資金に加わります。</p></details>
+    <div id="screen-content">${[center,offers,planning,fleet,research,records,practice][tab]()}</div>
+    <details class="chapter-panel"><summary>章の目標 ${model.goals.filter(([,v,g])=>v>=g).length} / ${model.goals.length}達成</summary><div class="goals">${model.goals.map(([name,value,goal])=>`<span class="goal ${value>=goal?'done':''}">${esc(name)} ${value} / ${goal}</span>`).join('')}${s().chapter<5?button('次の章へ','chapter',{},model.goals.some(([,v,g])=>v<g)):''}</div><p>すべての目標を達成すると次の章へ進めます。</p></details>
+    <footer class="foot">${storageOK?'<span>✓ このブラウザーに自動保存</span>':'<p class="bad">自動保存を使えません。閉じる前にセーブをファイルへ保管してください。</p>'}
+    <details class="save-panel"${args.pending_import||stale||!storageOK?' open':''}><summary>セーブの保管・復元</summary><div class="storage-controls"><button id="export">セーブをファイルに保管</button><button id="reload-save">最新の記録を読み込む</button><button id="backup">前のセーブへ戻す</button>${args.pending_import?'<button id="import-save" class="primary">読み込みを確定</button>':''}${stale?'<button id="raw-save">保護した記録を書き出す</button>':''}</div></details><p class="simulation-note">架空の医療データを使ったゲームです。診断・治療には使えません。衛星間中継・診療所からの送信は省略しています。架空の円軌道モデルによる模式図で、過去TLEの解析とは異なります。</p></footer>`;
+  root.querySelectorAll('details').forEach(el=>{
+    if(el.classList.contains('help-panel')||el.classList.contains('save-panel'))return;
+    const key=`${tab}:${el.querySelector('summary')?.textContent}`;
+    el.open=openPanels.has(key);
+    el.ontoggle=()=>{if(el.open)openPanels.add(key);else openPanels.delete(key);};
+  });
+  bind();paintReplay();requestAnimationFrame(()=>{
+    fit();
+    if(focusNext){
+      focusNext=false;
+      requestAnimationFrame(()=>{
+        // Scroll the Streamlit page as well as the component document.
+        (window.frameElement??root).scrollIntoView({block:'start'});
+      });
+    }
+  });
 }
 function bind() {
-  root.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{tab=Number(el.dataset.tab);render();});
+  root.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{tab=Number(el.dataset.tab);focusNext=true;render();root.querySelector('.nav .selected')?.focus({preventScroll:true});});
   root.querySelectorAll('[data-action]').forEach(el=>el.onclick=()=>{if(el.dataset.action==='exercise')tab=6;send(el.dataset.action,JSON.parse(el.dataset.fields));});
   root.querySelectorAll('[data-exercise-assign]').forEach(el=>el.onchange=()=>send('exercise_plan',{exercise:args.exercise.id,allocations:assignAllocation(args.exercise.plan.allocations,el.dataset.exerciseAssign,el.value)}));
   root.querySelectorAll('[data-exercise-move]').forEach(el=>el.onclick=()=>send('exercise_plan',{exercise:args.exercise.id,allocations:moveAllocation(args.exercise.plan.allocations,el.dataset.exerciseMove,Number(el.dataset.step))}));
@@ -179,10 +209,12 @@ function bind() {
     canEdit:()=>!pending&&!stale&&!fixed(),onPlan:allocations=>send('plan',{allocations})});
   root.querySelectorAll('[data-contact]').forEach(el=>{el.onclick=()=>{const items=model.contracts.filter(c=>s().accepted.includes(c.id)).flatMap(c=>c.parcels);const p=items.find(p=>!s().plan.allocations.some(a=>a.parcel===p.id));if(p)send('plan',{allocations:assignAllocation(s().plan.allocations,p.id,el.dataset.contact)});};});
   const click=(id,fn)=>{const el=document.getElementById(id);if(el)el.onclick=fn;};
+  const help=root.querySelector('.help-panel');if(help)help.ontoggle=()=>{helpOpen=help.open;fit();};
   const kindSelect=document.getElementById('buy-kind');if(kindSelect)kindSelect.onchange=()=>{buyKind=kindSelect.value;render();};
   click('buy',()=>send('buy',{kind:document.getElementById('buy-kind').value,orbit:document.getElementById('buy-orbit').value}));
   click('export',()=>exportFile(JSON.stringify(s()),'medlink-campaign-v2.json'));
   click('reload-save',()=>{try{expectedSave=localStorage.getItem(SAVE_KEY);stale=false;storageError='';send('restore',{save:readCampaign(localStorage)});}catch(error){storageError=error.message;render();}});
+  click('stale-reload',()=>document.getElementById('reload-save').click());
   click('backup',()=>{try{const save=localStorage.getItem(`${SAVE_KEY}.backup`);if(save)send('import',{save});else{storageError='前のセーブがありません。';render();}}catch(error){storageError=error.message;render();}});
   click('raw-save',()=>{try{exportFile(readCampaign(localStorage)??'{}','medlink-protected-save.json');}catch(error){storageError=error.message;render();}});
   click('import-save',()=>send('import',{save:args.pending_import}));
@@ -210,6 +242,8 @@ window.addEventListener('message',async event=>{
   if(event.source!==parent||event.data.type!=='streamlit:render')return;
   args=event.data.args;model=args.model;
   if(pending&&args.ack===pending){
+    focusNext=['accept','cancel','auto','commit','claim','next','chapter'].includes(pendingAction);
+    pendingAction=null;
     if(args.error){storageError=args.notice;if(args.restore_error)stale=true;}
     else if(storageOK){try{expectedSave=saveCampaign(localStorage,s(),expectedSave);storageError='';}catch(error){storageError=error.message;storageOK=false;}}
     const resolve=unlockPending;pending=null;unlockPending=null;if(resolve)resolve();
