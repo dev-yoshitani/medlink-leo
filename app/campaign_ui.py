@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import base64
 import json
 from dataclasses import asdict, replace
 from pathlib import Path
@@ -79,11 +78,10 @@ def board_model(state: CampaignState) -> dict:
             ]
         ],
         "assets": {
-            name: "data:image/svg+xml;base64,"
-            + base64.b64encode(
-                (Path(__file__).parent / "assets" / f"{name}.svg").read_bytes()
-            ).decode("ascii")
-            for name in ("satellite", "ground_station", "hospital", "remote_clinic")
+            name: f"art/{name}-v2.png"
+            for name in (
+                "landscape", "satellite", "ground_station", "hospital", "remote_clinic", "parcel"
+            )
         },
     }
 

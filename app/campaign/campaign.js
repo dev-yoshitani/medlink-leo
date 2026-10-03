@@ -1,6 +1,7 @@
 import {SAVE_KEY, readCampaign, saveCampaign, moveAllocation, assignAllocation,
   timeLabel, parcelStatus} from './storage.mjs';
 import {bindParcelDrag} from './drag.mjs';
+import {campaignMap, sceneCoords, satelliteX} from './scene.mjs';
 
 const root = document.getElementById('game');
 const tabs = ['通信センター','依頼手帳','配送計画','衛星・設備','研究','運用記録','練習場'];
@@ -81,34 +82,11 @@ function guide() {
   return `<section class="guide"><header><h3>運用ガイド ${s().tutorial?`${stage+1} / 5`:''}</h3>${button(s().tutorial?'案内を閉じる':'遊び方を開く','tutorial',{open:!s().tutorial})}</header>
     ${s().tutorial?`<strong>${guides[stage][0]}</strong><p>${guides[stage][1]}</p>${manualGuide===null&&steps.length?`<ul>${steps.map(step=>`<li>${step[1]?'✓ 完了：':'○ 次の操作：'}${step[0]}</li>`).join('')}</ul>`:''}<div class="actions">${nextDayGuide?button('翌日へ進んで容量を確認する','next',{},false,true):`<button data-tab="${manualGuide===null&&next?next[2]:destinations[stage]}" class="primary">${manualGuide===null&&next?next[0]:actions[stage]} →</button>`}<button id="guide-prev"${disabled(stage===0)}>前へ</button><button id="guide-next"${disabled(stage===4)}>次へ</button><button id="guide-current">今の操作へ</button></div>`:''}</section>`;
 }
-function mapMarkup() {
-  const report = model.preview;
-  const links = fixed() ? report.deliveries.filter(d=>d.arrival!==null) : [];
-  const coords = station => {const f=model.stations.find(f=>f.id===station);return [f.x, f.y*.7+165];};
-  const sx = id => 170 + Math.max(0,s().satellites.findIndex(t=>t.id===id))*125;
-  return `<section class="map"><div class="map-heading"><span>あなたの通信網</span><span>${s().satellites.length}機 / ${s().facilities.length}拠点</span></div>
-    <svg viewBox="0 0 1000 720" role="img" aria-label="衛星と地上拠点の通信網の模式図">
-    <defs><pattern id="sea" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M0 30q10-5 20 0t20 0" fill="none" stroke="#b5d2cb" opacity=".5"/></pattern></defs>
-    <rect width="1000" height="720" fill="#e4efdf"/><rect y="180" width="1000" height="540" fill="url(#sea)"/>
-    <path d="M815 225l-30 55-40-8-20 34-15 50-25 30-24 20-21 45-55 28-10 27-73 25-25-12 65-42 27-12 15-35 50-48 19-54 12-37 38-12 10-48z" fill="#c0d2a5" stroke="#9fb58b" stroke-width="2"/>
-    <path d="M385 400l30 13 30 24-23 43-40 3-15-25zM190 525l25 10-5 17-30-4z" fill="#c0d2a5"/>
-    <path d="M95 110Q480 -30 905 110" fill="none" stroke="#adc4aa" stroke-width="2" stroke-dasharray="5 9"/>
-    ${links.map(d=>{const [x,y]=coords(d.station);return `<path d="M${sx(d.satellite)} 93Q${x} 130 ${x} ${y}" stroke="#659e83" stroke-width="2" stroke-dasharray="4 7" fill="none"/>`;}).join('')}
-    ${s().satellites.map(t=>`<g opacity="${t.active&&(!s().book.recovery||t.id===s().satellites[0].id)?'1':'.35'}"><image href="${model.assets.satellite}" x="${sx(t.id)-44}" y="35" width="${t.kind==='bulk'?100:85}" height="65"/><text x="${sx(t.id)}" y="118" text-anchor="middle" fill="#365f52" font-size="14">${esc(t.id)}・${esc(model.orbits[t.orbit].name)}</text></g>`).join('')}
-    ${model.stations.map(f=>{const [x,y]=coords(f.id), live=f.facility, width=live?62+live.antenna*8:65;return `<g class="scene-station" data-station="${f.id}" tabindex="0" role="button" aria-label="${f.name}の設備を選ぶ" opacity="${live?(live.active?'1':'.5'):'.35'}">
-      <ellipse class="pad ${selected===f.id?'selected-pad':''}" cx="${x}" cy="${y+35}" rx="65" ry="25" fill="#dbe3bd" stroke="#acbb94"/>
-      <image href="${model.assets.ground_station}" x="${x-width/2}" y="${y-45}" width="${width}" height="85"/>
-      ${live?Array.from({length:live.receivers-1},(_,i)=>`<image href="${model.assets.ground_station}" x="${x-55+i*25}" y="${y+15}" width="30" height="34"/>`).join(''):''}
-      ${live&&live.backhaul>1?`<rect x="${x+32}" y="${y+7-live.backhaul*5}" width="25" height="${20+live.backhaul*5}" rx="3" fill="#779b7b"/>`:''}
-      <text x="${x}" y="${y+63}" text-anchor="middle" font-size="18" font-weight="bold" fill="#355646">${esc(f.name)}</text>
-      <text x="${x}" y="${y+82}" text-anchor="middle" font-size="12" fill="#60705c">${live?`アンテナ${live.antenna} / 回線${live.backhaul} / 受信${live.receivers}台`:'未開放'}</text></g>`;}).join('')}
-    <image href="${model.assets.hospital}" x="820" y="565" width="100" height="90"/><text x="870" y="680" text-anchor="middle" font-size="16" fill="#355646">病院への中継点</text>
-    <g id="map-packets"></g></svg><p class="map-caption">施設を選ぶと強化できます。架空の円軌道によるゲーム用模式図です。</p></section>`;
-}
+function mapMarkup() {return campaignMap(model,selected,fixed());}
 function facilityMarkup(id=selected) {
   const f=model.stations.find(f=>f.id===id), live=f.facility;
-  if(!live) return `<section class="sheet"><h2>${esc(f.name)}の通信拠点</h2><p>新しい場所から衛星を受けられます。回線の基本遅延は${f.delay}秒です。</p><p>開放費用 ${money(f.cost)} C・第${f.chapter}章</p>${button('拠点を開く','unlock',{asset:f.id},investBlocked()||s().chapter<f.chapter||s().credits<f.cost,true)}</section>`;
-  return `<section class="sheet"><h2>${esc(f.name)}の設備</h2><p>${live.active?'稼働中':'休止中'}・受信${live.receivers}台</p>
+  if(!live) return `<section class="sheet"><img class="facility-art" src="${model.assets.ground_station}" alt="${esc(f.name)}の地上局"/><h2>${esc(f.name)}の通信拠点</h2><p>新しい場所から衛星を受けられます。回線の基本遅延は${f.delay}秒です。</p><p>開放費用 ${money(f.cost)} C・第${f.chapter}章</p>${button('拠点を開く','unlock',{asset:f.id},investBlocked()||s().chapter<f.chapter||s().credits<f.cost,true)}</section>`;
+  return `<section class="sheet"><img class="facility-art" src="${model.assets.ground_station}" alt="${esc(f.name)}の地上局"/><h2>${esc(f.name)}の設備</h2><p>${live.active?'稼働中':'休止中'}・受信${live.receivers}台</p>
     ${['antenna','backhaul','receivers'].map((type,i)=>{const n=live[type], cost=type==='receivers'?300*n:100*n*n;
       const limit=type==='antenna'?(s().research[0]>=3?5:3):type==='backhaul'?2+s().research[1]:1+Math.min(2,s().research[0]);
       return `<h3>${['受信アンテナ','地上回線','受信設備'][i]} Lv.${n}</h3><div class="level">${'●'.repeat(n)}${'○'.repeat(Math.max(0,5-n))}</div><p>${['送れる量を増やす','病院への到着を早める','同時に受ける衛星を増やす'][i]}</p><div class="actions">${button(n>=limit?'研究で上限を開放':`強化 ${money(cost)} C`,'upgrade',{asset:id,equipment:type},investBlocked()||n>=limit||s().credits<cost||(type==='receivers'&&s().chapter<3))}</div>`;}).join('')}
@@ -123,11 +101,11 @@ function dayActions() {
   return `<div class="actions">${!fixed()?button('運用開始','commit',{},!s().accepted.length,true):claimed()?`${button('翌日へ進む','next',{},false,true)}<span class="good">報酬は受領済み</span>`:button('報酬を受け取る','claim',{settlement:s().report.id},false,true)}</div>`;
 }
 function center() {
-  return `<div class="layout"><div>${mapMarkup()}${replayMarkup()}${forecast()}${dayActions()}</div><aside class="side"><section class="sheet"><h2>${esc(s().book.event_title)}</h2><p>${esc(s().book.event_body)}</p>${s().book.recovery?'<p class="bad">復旧モード：基本衛星と札幌局で再開します。追加設備を休止し、維持費を免除します。100 C以上で通常運営へ戻れます。追加設備は設備画面から再開できます。</p>':''}<p>今日の維持費 ${s().book.upkeep} C</p><h3>今日の課題：${esc(model.daily_challenge.title)}</h3><p>${esc(model.daily_challenge.body)}</p>${button("練習で試す","exercise",{exercise:model.daily_challenge.id})}<div class="actions"><button data-tab="1">依頼を選ぶ</button><button data-tab="2">配送計画へ</button></div></section>${facilityMarkup()}</aside></div>`;
+  return `<div class="layout scene-layout"><div>${mapMarkup()}${replayMarkup()}${forecast()}${dayActions()}</div><aside class="side"><section class="sheet"><h2>${esc(s().book.event_title)}</h2><p>${esc(s().book.event_body)}</p>${s().book.recovery?'<p class="bad">復旧モード：基本衛星と札幌局で再開します。追加設備を休止し、維持費を免除します。100 C以上で通常運営へ戻れます。追加設備は設備画面から再開できます。</p>':''}<p>今日の維持費 ${s().book.upkeep} C</p><h3>今日の課題：${esc(model.daily_challenge.title)}</h3><p>${esc(model.daily_challenge.body)}</p>${button("練習で試す","exercise",{exercise:model.daily_challenge.id})}<div class="actions"><button data-tab="1">依頼を選ぶ</button><button data-tab="2">配送計画へ</button></div></section>${facilityMarkup()}</aside></div>`;
 }
 function offers() {
   return `<section class="sheet"><div class="section-head"><h2>今日の依頼手帳</h2><span>受注 ${s().accepted.length} / ${3+s().research[2]}件</span></div><p class="muted">受ける依頼を組み合わせます。未達費用と必要な期限内件数を確認してください。</p>${forecast()}
-    <div class="offers">${model.contracts.map(c=>{const accepted=s().accepted.includes(c.id), ongoing=s().ongoing.some(o=>o.id===c.id);return `<article class="offer ${accepted?'accepted':''}"><header><h3>${esc(c.title)}</h3><span class="tag">${c.days_left>1?`${c.days_left}日契約`:accepted?'受注中':'今日の依頼'}</span></header>
+    <div class="offers">${model.contracts.map(c=>{const accepted=s().accepted.includes(c.id), ongoing=s().ongoing.some(o=>o.id===c.id);return `<article class="offer ${accepted?'accepted':''}"><header><img class="offer-parcel" src="${model.assets.parcel}" alt=""/><h3>${esc(c.title)}</h3><span class="tag">${c.days_left>1?`${c.days_left}日契約`:accepted?'受注中':'今日の依頼'}</span></header>
       <p>荷物${c.parcels.length}件・合計${(c.parcels.reduce((n,p)=>n+p.size_bytes,0)/1e6).toFixed(2)} MB<br>期限 ${timeLabel(Math.min(...c.parcels.map(p=>p.due)))} / 達成条件 ${c.target}件<br>期限内1件 ${c.payment} C＋達成 ${c.bonus} C<br>未達費用 ${c.penalty} C</p>
       ${c.lock?`<p class="muted">${esc(c.lock)}</p>`:''}${ongoing?'<p>継続中：今日の決算まで続きます。</p>':button(accepted?'受注を取り消す':'受注する',accepted?'cancel':'accept',{contract:c.id},fixed()||(!accepted&&(!!c.lock||s().accepted.length>=3+s().research[2])),!accepted&&!c.lock)}</article>`;}).join('')}</div>${dayActions()}<button data-tab="2">配送計画を組む →</button></section>`;
 }
@@ -222,9 +200,9 @@ function paintReplay() {
   for(const d of s().report.deliveries){const el=root.querySelector(`[data-status="${CSS.escape(d.parcel)}"]`);if(el)el.textContent=parcelStatus(d,clock);}
   const packets=document.getElementById('map-packets');if(!packets)return;
   packets.innerHTML=s().report.deliveries.filter(d=>d.departure!==null&&clock>=d.departure&&clock<d.arrival).map(d=>{
-    const station=model.stations.find(f=>f.id===d.station), sx=170+Math.max(0,s().satellites.findIndex(t=>t.id===d.satellite))*125, sy=station.y*.7+165;
-    let x,y;if(clock<d.completion){const p=(clock-d.departure)/(d.completion-d.departure);x=sx+(station.x-sx)*p;y=93+(sy-93)*p;}else{const p=(clock-d.completion)/(d.arrival-d.completion);x=station.x+(870-station.x)*p;y=sy+(600-sy)*p;}
-    return `<rect class="packet" x="${x-6}" y="${y-5}" width="12" height="10" rx="2"/>`;
+    const [stationX,sy]=sceneCoords(d.station), sx=satelliteX(d.satellite,s().satellites);
+    let x,y;if(clock<d.completion){const p=(clock-d.departure)/(d.completion-d.departure);x=sx+(stationX-sx)*p;y=93+(sy-93)*p;}else{const p=(clock-d.completion)/(d.arrival-d.completion);x=stationX+(884-stationX)*p;y=sy+(610-sy)*p;}
+    return `<image href="${model.assets.parcel}" x="${x-14}" y="${y-12}" width="28" height="24"/>`;
   }).join('');
 }
 window.addEventListener('storage',e=>{if(e.key===SAVE_KEY&&!pending&&e.newValue!==expectedSave){stale=true;storageError='別の画面で記録が更新されました。最新の記録を読み込んでください。';render();}});
