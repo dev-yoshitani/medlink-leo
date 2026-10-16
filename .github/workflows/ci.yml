@@ -45,6 +45,14 @@ jobs:
       - name: Test
         run: python -m pytest
 
+      - name: Check game JavaScript and interaction rules
+        run: |
+          node --version
+          for file in app/campaign/*.js app/campaign/*.mjs app/game/*.js app/game/*.mjs; do
+            node --check "$file"
+          done
+          node --test tests/*.test.mjs
+
       - name: Reproduce canonical evidence
         run: python scripts/check_evidence.py
 
@@ -72,11 +80,21 @@ jobs:
           from streamlit.testing.v1 import AppTest
           app = AppTest.from_file('/app/app/streamlit_app.py', default_timeout=60).run()
           assert not app.exception
+          assert app.radio(key='demo_mode').value == '通信センター'
+          assert app.session_state.fleet_state.day == 1
+          app.radio(key='demo_mode').set_value('経路シミュレーション').run()
+          assert not app.exception
           app.button(key='compare_routing').click().run()
           assert not app.exception
-          assert any('Routing comparison complete' in value.value for value in app.success)
+          assert any('計算完了' in value.value for value in app.markdown)
           app.selectbox(key='routing_strategy').set_value('deadline-aware').run()
-          assert any('Route decisions — deadline-aware' == value.value for value in app.subheader)
+          assert not app.exception
+          assert app.selectbox(key='routing_strategy').value == 'deadline-aware'
+          assert any('接触開始（秒）' in frame.value.columns for frame in app.dataframe)
+          app.radio(key='demo_mode').set_value('通信リンク').run()
+          app.button(key='run_simulation').click().run()
+          assert not app.exception
+          assert any('スケジューラ' in frame.value.columns for frame in app.dataframe)
           PY
       - name: Logs and cleanup
         if: always()
