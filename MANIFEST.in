@@ -1,5 +1,5 @@
-include requirements.txt Dockerfile
-recursive-include app *.py
+include requirements.txt Dockerfile Start-Game.bat
+recursive-include app *.py *.html *.css *.js *.mjs *.svg *.png *.md
 recursive-include examples *.json
 recursive-include experiments *.json
 recursive-include .streamlit *.toml

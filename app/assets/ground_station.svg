@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 120" role="img" aria-label="地上局のイラスト">
+  <path d="M35 103h90" stroke="#263c50" stroke-width="7" stroke-linecap="round"/>
+  <path d="M73 99 82 58l18 41" fill="#a2b8ba" stroke="#263c50" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M30 21c-5 31 17 57 49 57 25 0 43-17 48-39-19 13-50 12-71-5-8-6-16-10-26-13Z" fill="#b7d4dd" stroke="#263c50" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M38 30c20 35 53 43 82 16" fill="none" stroke="#e3f0e7" stroke-width="4"/>
+  <path d="m79 63 39-44" stroke="#263c50" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="120" cy="17" r="7" fill="#e4b56c" stroke="#263c50" stroke-width="4"/>
+  <path d="M123 4c7 1 12 6 13 13m-13-3c2 0 4 2 4 4" fill="none" stroke="#89c3df" stroke-width="3" stroke-linecap="round"/>
+  <rect x="37" y="93" width="86" height="11" rx="3" fill="#7c9f9e" stroke="#263c50" stroke-width="4"/>
+</svg>

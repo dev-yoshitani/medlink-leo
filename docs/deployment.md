@@ -22,8 +22,13 @@ python -m pip install -e ".[dev]"
 streamlit run app/streamlit_app.py
 ```
 
-Streamlit normally serves the app at `http://localhost:8501`. Contact-Plan Routing is the default
-mode; Existing Simulation preserves the v1.0 demo.
+Streamlit normally serves the app at `http://localhost:8501`. In this branch, **通信センター**
+is the default screen. **経路シミュレーション** and **通信リンク** retain the engineering demos.
+The Windows [Start-Game.bat](../Start-Game.bat) launcher uses `http://127.0.0.1:8502/` on
+the loopback interface. Campaign progress is stored in the browser, with JSON export/import;
+it does not require a server database or persistent server disk. Keep the same origin when
+resuming. See [game.md](game.md) for setup, save behavior and model boundaries.
+This branch has been checked locally; the deployment record below concerns the earlier public UI.
 
 ## Streamlit Community Cloud
 
@@ -34,12 +39,14 @@ Using the public `dev-yoshitani/medlink-leo` repository:
 2. Set the main file path to `app/streamlit_app.py`.
 3. In Advanced settings, select Python 3.12.
 4. Leave Secrets empty; the default demo needs no environment variables.
-5. Deploy, then verify the safety notice, Contact-Plan Routing comparison, Ground Station table,
-   Why this route? explanation, and Existing Simulation mode.
+5. Deploy, then verify the Japanese safety notice, routing comparison, selected route and failure
+   explanation, JSON download, and **通信リンク** screen.
 
-The public URL was opened after deployment. The browser showed the synthetic-data/non-clinical
-notice, the three-strategy comparison, contact and ground-station candidates, and a Why this
-route? explanation. Switching to Deadline-Aware and selecting a failed item kept the comparison
+The following browser checks record the earlier public UI at deployment on 2026-09-24 JST; they
+do not verify this branch. The public URL was opened after deployment. The browser showed the
+synthetic-data/non-clinical notice, the three-strategy comparison, contact and ground-station
+candidates, and a "Why this route?" explanation. Switching to Deadline-Aware and selecting a
+failed item kept the comparison
 visible and showed `INSUFFICIENT_CAPACITY`. Existing Simulation ran and displayed FIFO, Priority,
 and EDF results. The routing JSON button triggered a browser download; downloaded bytes were not
 separately inspected. Cloud logs showed Python 3.12.14 and installation from root
